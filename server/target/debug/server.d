@@ -1,1 +1,1 @@
-/Users/t/code/r/term-chat-mono/server/target/debug/server: /Users/t/code/r/term-chat-mono/server/src/db.rs /Users/t/code/r/term-chat-mono/server/src/main.rs /Users/t/code/r/term-chat-mono/server/src/models.rs /Users/t/code/r/term-chat-mono/server/src/routes.rs /Users/t/code/r/term-chat-mono/server/src/schema.rs /Users/t/code/r/term-chat-mono/server/src/server.rs /Users/t/code/r/term-chat-mono/server/src/session.rs
+/Users/t/code/r/term-chat-mono/server/target/debug/server: /Users/t/code/r/term-chat-mono/server/src/main.rs
