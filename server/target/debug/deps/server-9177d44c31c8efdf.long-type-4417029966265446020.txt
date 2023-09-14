@@ -1,1 +1,0 @@
-(actix_web::web::Data<Pool<ConnectionManager<diesel::SqliteConnection>>>, actix_web::web::Json<NewUser>)
