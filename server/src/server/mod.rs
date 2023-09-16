@@ -6,14 +6,19 @@ use tokio::{
     net::TcpListener,
 };
 
+use self::error::ServerError;
+
 #[tokio::main]
 async fn init() -> Result<(), ServerError> {
-    let listener = TcpListener::bind("localhost:8080").await?;
+    let listener = TcpListener::bind("localhost:8080")
+        .await
+        .map_err(ServerError::TcpBind)?;
+
     let (tx, rx) = broadcast::channel(10);
     loop {
         let tx = tx.clone();
         let mut rx = tx.subscribe();
-        let (mut socket, addr) = listener.accept().await.unwrap();
+        let (mut socket, addr) = listener.accept().await.map_err(ServerError::TcpAccept)?;
         tokio::spawn(async move {
             let (reader, mut writer) = socket.split();
             let mut reader = BufReader::new(reader);
