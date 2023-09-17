@@ -5,7 +5,7 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 #[derive(Clone)]
-enum ClientState {
+pub enum ClientState {
     Anonymous,
     Registered { username: String }, // TODO: make sure this isn't too long so copying isn't
                                      // expensive
