@@ -1,11 +1,23 @@
-use server::server::init;
+use server::server::Server;
 
 #[tokio::main]
 async fn main() {
-    match init().await {
-        Ok(_) => println!("Server started"),
+    let server = Server::new("localhost:8080").await;
+    match server {
+        Ok(mut server) => {
+            println!("server created, starting");
+            match server.run().await {
+                Ok(_) => {
+                    println!("server finished");
+                }
+                Err(e) => {
+                    eprintln!("server failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
         Err(e) => {
-            eprintln!("Server error: {}", e);
+            eprintln!("failed to create server: {}", e);
             std::process::exit(1);
         }
     }

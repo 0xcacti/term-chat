@@ -1,18 +1,22 @@
+pub mod error;
+
+use self::error::ClientError;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
-pub mod error;
-
+#[derive(Clone)]
 enum ClientState {
     Anonymous,
-    Registered { username: String },
+    Registered { username: String }, // TODO: make sure this isn't too long so copying isn't
+                                     // expensive
 }
 
-struct Client {
-    id: Uuid,
-    state: ClientState,
-    addr: std::net::SocketAddr,
-    tx: broadcast::Sender<(String, Uuid)>,
+#[derive(Clone)]
+pub struct Client {
+    pub id: Uuid,
+    pub state: ClientState,
+    pub addr: std::net::SocketAddr,
+    pub tx: broadcast::Sender<(String, Uuid)>,
 }
 
 impl Client {
@@ -25,7 +29,9 @@ impl Client {
         }
     }
 
-    pub fn register(&mut self, username: String) -> Result<(), String> {
-        todo!()
+    pub fn register(&mut self, username: String) -> Result<(), ClientError> {
+        // is registered
+        self.state = ClientState::Registered { username };
+        Ok(())
     }
 }
