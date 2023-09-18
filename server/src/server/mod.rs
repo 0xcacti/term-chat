@@ -2,6 +2,7 @@ pub mod error;
 
 use std::collections::HashMap;
 
+use log::error;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast;
 use tokio::{
@@ -80,7 +81,7 @@ impl Server {
                                 line.clear()
                             }
                             Err(e) => {
-                                eprintln!("failed to read from socket; err = {:?}", e);
+                                error!("failed to read from socket; err = {:?}", e);
                                 break;
                             }
 
@@ -90,17 +91,17 @@ impl Server {
                         match result {
                             Ok((msg, other_id)) if client.id != other_id => {
                                 if writer.write_all(msg.as_bytes()).await.is_err() {
-                                    eprintln!("failed to write to socket");
+                                    error!("failed to write to socket");
                                     break;
                                 }
 
                             }
                             Err(broadcast::error::RecvError::Lagged(_)) => {
-                                eprintln!("lagged");
+                                error!("lagged");
                                 break;
                             }
                             Err(broadcast::error::RecvError::Closed) => {
-                                eprintln!("channel closed");
+                                error!("channel closed");
                                 break;
                             }
 
