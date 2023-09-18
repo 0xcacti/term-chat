@@ -8,4 +8,6 @@ pub enum DBError {
     Setup(#[source] rusqlite::Error),
     #[error("Failed to execute query")]
     Query(#[source] rusqlite::Error),
+    #[error("User already exists")]
+    UserExists,
 }
