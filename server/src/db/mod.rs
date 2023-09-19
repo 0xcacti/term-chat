@@ -56,15 +56,13 @@ fn create_sessions_table(conn: &Connection) -> Result<(), DBError> {
     Ok(())
 }
 
-pub fn register_client(conn: &Connection, client: &Client) -> Result<(), DBError> {
-    // match check_user_exists(conn, &client.name) {
-    //     Ok(_) => (),
-    //     Err(e) => return Err(e),
-    // }
-    // conn.execute(
-    //     "INSERT INTO clients (id, name, addr) VALUES (?1, ?2, ?3)",
-    //     params![client.id.to_string(), client.name, client.addr.to_string()],
-    // )
-    //.map_err(DBError::Query)?;
+pub fn register_client(conn: &Connection, client: &Client, username: &str) -> Result<(), DBError> {
+    check_user_exists(conn, username)?;
+
+    conn.execute(
+        "INSERT INTO clients (uuid, username) VALUES (?1, ?2)",
+        params![client.id.to_string(), username],
+    )
+    .map_err(DBError::Query)?;
     Ok(())
 }
