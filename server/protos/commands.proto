@@ -1,0 +1,19 @@
+// chat.proto
+syntax = "proto3";
+
+message Command {
+    oneof commandType {
+        Registration registration = 1;
+        Message message = 2;
+        // ... other commands
+    }
+}
+
+message Registration {
+    string username = 1;
+}
+
+message Message {
+    string content = 1;
+}
+
