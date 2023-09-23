@@ -1,5 +1,3 @@
-pub mod command_handler;
-pub mod dispatcher;
 pub mod error;
 
 use std::collections::HashMap;
