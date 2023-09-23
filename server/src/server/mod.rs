@@ -3,16 +3,15 @@ pub mod error;
 use std::collections::HashMap;
 
 use log::error;
+use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast;
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::TcpListener,
-};
+use tokio::{io::AsyncWriteExt, net::TcpListener};
 use uuid::Uuid;
 
 use self::error::ServerError;
 use crate::client::Client;
+use crate::message::Message;
 
 pub struct Server {
     listener: TcpListener,
@@ -63,30 +62,43 @@ impl Server {
     ) -> Result<(), ServerError> {
         let tx = self.broadcast_tx.clone();
         let mut rx = tx.subscribe();
+        let mut len_buf = [0u8; 4];
 
         tokio::spawn(async move {
-            let (reader, mut writer) = socket.split();
-            let mut reader = BufReader::new(reader);
-            let mut line = String::new();
-
+            let (mut reader, mut writer) = socket.split();
             loop {
                 tokio::select! {
-                    result = reader.read_line(&mut line) => {
-                        match result {
-                            Ok(n) if n == 0 => break,
-                            Ok(_) => {
-                                if tx.send((line.clone(), client.id)).is_err() {
-                                    break;
-                                }
-                                line.clear()
+                    // read from the client
+                    read_result = reader.read_exact(&mut len_buf) => {
+                        if read_result.is_err() {
+                            error!("failed to read from socket");
+                            break;
+                        }
+                        let msg_len = u32::from_be_bytes(len_buf) as usize;
+
+                        let mut msg_buf = vec![0u8; msg_len as usize];
+
+                        if reader.read_exact(&mut msg_buf).await.is_err() {
+                            error!("failed to read from socket");
+                            break;
+                        }
+
+                        let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
+                        match message {
+                            Ok(parsed_message) => {
+
+                                println!("message: {:?}", parsed_message);
+
                             }
                             Err(e) => {
-                                error!("failed to read from socket; err = {:?}", e);
+                                error!("failed to parse message: {}", e);
                                 break;
                             }
-
                         }
                     }
+
+                    // read from other clients and broadcast
+
                     result = rx.recv() => {
                         match result {
                             Ok((msg, other_id)) if client.id != other_id => {
@@ -114,4 +126,29 @@ impl Server {
         });
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    const SERVER_ADDRESS: &'static str = "127.0.0.1:8080";
+
+    #[tokio::test]
+    async fn test_client_can_connect() {
+        let mut server = Server::new(SERVER_ADDRESS).await.unwrap();
+        let server_handle = tokio::spawn(async move {
+            server.run().await.unwrap();
+        });
+
+        let client = TcpStream::connect(SERVER_ADDRESS).await;
+        assert!(client.is_ok());
+
+        server_handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_client_can_send_message() {}
+
+    #[tokio::test]
+    async fn test_client_can_receive_message() {}
 }
