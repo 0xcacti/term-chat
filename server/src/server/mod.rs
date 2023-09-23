@@ -2,7 +2,6 @@ pub mod command_handler;
 pub mod dispatcher;
 pub mod error;
 
-use crate::protobufs::commands::Command;
 use std::collections::HashMap;
 
 use log::error;
