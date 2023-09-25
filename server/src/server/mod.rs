@@ -52,6 +52,7 @@ impl Server {
                 .map_err(ServerError::TcpAccept)?;
             let client = self.register_client(addr).await?;
             self.handle_client(client, socket).await?;
+            println!("client connected -- weewoo weewoo : {}", addr);
         }
     }
 
@@ -63,6 +64,7 @@ impl Server {
         let tx = self.broadcast_tx.clone();
         let mut rx = tx.subscribe();
         let mut len_buf = [0u8; 4];
+        println!("meow");
 
         tokio::spawn(async move {
             let (mut reader, mut writer) = socket.split();
@@ -70,27 +72,44 @@ impl Server {
                 tokio::select! {
                     // read from the client
                     read_result = reader.read_exact(&mut len_buf) => {
+                        println!("received message from client");
                         if read_result.is_err() {
                             error!("failed to read from socket");
+                            println!("failed to read from socket");
                             break;
                         }
                         let msg_len = u32::from_be_bytes(len_buf) as usize;
 
                         let mut msg_buf = vec![0u8; msg_len as usize];
 
-                        if reader.read_exact(&mut msg_buf).await.is_err() {
-                            error!("failed to read from socket");
+                        println!("message length: {}", msg_len);
+                        if let Err(e) = reader.read_exact(&mut msg_buf).await {
+                            error!("failed to read from socket {e}");
+                            println!("failed to read exact from socket");
+                            println!("failed to read exact from socket");
+                            println!("failed to read exact from socket");
                             break;
                         }
 
+                        println!("lmessage from client");
+                        println!("lmessage from client");
+                        println!("lmessage from client");
                         let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
                         match message {
                             Ok(parsed_message) => {
-
-                                println!("message: {:?}", parsed_message);
+                                let broadcast_message = serde_json::to_string(&parsed_message).unwrap();
+                                let res = tx.send((parsed_message.payload, client.id));
+                                match res {
+                                    Ok(_) => (),
+                                    Err(e) => {
+                                        error!("failed to broadcast message {}", e);
+                                        break;
+                                    }
+                                }
 
                             }
                             Err(e) => {
+                                println!("failed to parse message: {}", e);
                                 error!("failed to parse message: {}", e);
                                 break;
                             }
@@ -100,6 +119,7 @@ impl Server {
                     // read from other clients and broadcast
 
                     result = rx.recv() => {
+                        println!("received message from other client");
                         match result {
                             Ok((msg, other_id)) if client.id != other_id => {
                                 if writer.write_all(msg.as_bytes()).await.is_err() {
@@ -134,6 +154,7 @@ mod test {
     use crate::message::MessageType;
     use std::sync::atomic::{AtomicU16, Ordering};
     use tokio::task::JoinHandle;
+    use tokio::time::{sleep, Duration};
 
     static NEXT_PORT: AtomicU16 = AtomicU16::new(8000);
 
@@ -146,11 +167,10 @@ mod test {
         let message = Message::new(MessageType::Chat, "hello".to_string());
         let message_json = serde_json::to_string(&message).unwrap();
         let message_len = message_json.len() as u32;
-        let mut message_len_buf = message_len.to_be_bytes().to_vec();
-        message_len_buf.resize(4, 0);
+        let message_len_buf = message_len.to_be_bytes().to_vec();
 
-        let mut message_buf = message_json.as_bytes().to_vec();
-        message_buf.extend_from_slice(&mut message_len_buf);
+        let mut message_buf = message_len_buf;
+        message_buf.extend_from_slice(message_json.as_bytes());
         message_buf
     }
     async fn setup(server_address: &str) -> JoinHandle<()> {
@@ -187,19 +207,25 @@ mod test {
     async fn test_client_can_receive_message() {
         let server_address = get_server_address();
         let server_handle = setup(&server_address).await;
+        println!("server address: {}", server_address);
 
         let mut client_one = TcpStream::connect(&server_address).await.unwrap();
         let mut client_two = TcpStream::connect(&server_address).await.unwrap();
 
+        println!("we can create the clients and connect");
+        sleep(Duration::from_millis(100)).await;
+
         let message_buf = get_test_chat_message();
         client_one.write_all(&message_buf).await.unwrap();
+        println!("we can create the message buffer");
+        println!("we can write the message buffer");
 
         let mut len_buf = [0u8; 4];
         client_two.read_exact(&mut len_buf).await.unwrap();
         let msg_len = u32::from_be_bytes(len_buf) as usize;
 
-        let msg_buf = vec![0u8; msg_len];
-        client_two.read_exact(&mut len_buf).await.unwrap();
+        let mut msg_buf = vec![0u8; msg_len];
+        client_two.read_exact(&mut msg_buf).await.unwrap();
 
         let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
         match received_message {
@@ -211,7 +237,6 @@ mod test {
                 panic!("failed to parse message: {}", e);
             }
         }
-
         server_handle.abort();
     }
 }
