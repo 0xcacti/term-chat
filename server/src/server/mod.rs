@@ -98,7 +98,14 @@ impl Server {
                         match message {
                             Ok(parsed_message) => {
                                 let broadcast_message = serde_json::to_string(&parsed_message).unwrap();
-                                let res = tx.send((parsed_message.payload, client.id));
+                                let message_len = broadcast_message.len() as u32;
+                                let mut complete_message = message_len.to_be_bytes().to_vec();
+                                complete_message.extend_from_slice(broadcast_message.as_bytes());
+                                let broadcast_message_str = String::from_utf8(complete_message).unwrap();
+                                let res = tx.send((broadcast_message_str, client.id)); // TODO:
+                                                                                         // vec<u8>
+                                                                                         // prevents
+                                                                                         // emoji?
                                 match res {
                                     Ok(_) => (),
                                     Err(e) => {
@@ -122,6 +129,7 @@ impl Server {
                         println!("received message from other client");
                         match result {
                             Ok((msg, other_id)) if client.id != other_id => {
+                                println!("everything is gonna be okay#");
                                 if writer.write_all(msg.as_bytes()).await.is_err() {
                                     error!("failed to write to socket");
                                     break;
@@ -137,7 +145,19 @@ impl Server {
                                 break;
                             }
 
-                            _ => (),
+                            Ok((x, y)) => {
+                                println!("we don't know what the heck is happening");
+                                println!("{}", x);
+                                println!("{}", y);
+                                println!("{}", x);
+                                println!("{}", y);
+                                println!("{}", x);
+                                println!("{}", y);
+                                println!("{}", client.id);
+                                println!("we don't know what the heck is happening");
+                                break;
+                            }
+
 
                         }
                     }
@@ -213,7 +233,7 @@ mod test {
         let mut client_two = TcpStream::connect(&server_address).await.unwrap();
 
         println!("we can create the clients and connect");
-        sleep(Duration::from_millis(100)).await;
+        // sleep(Duration::from_millis(100)).await;
 
         let message_buf = get_test_chat_message();
         client_one.write_all(&message_buf).await.unwrap();
@@ -226,6 +246,7 @@ mod test {
 
         let mut msg_buf = vec![0u8; msg_len];
         client_two.read_exact(&mut msg_buf).await.unwrap();
+        println!("we can read the message buffer");
 
         let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
         match received_message {
