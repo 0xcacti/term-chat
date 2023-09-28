@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use self::error::ServerError;
 use crate::client::Client;
-use crate::message::Message;
+use crate::message::{Message, MessageType};
 
 pub struct Server {
     listener: TcpListener,
@@ -55,10 +55,6 @@ impl Server {
         }
     }
 
-    pub fn encode_message() {
-        let broadcast_message_str = String::from_utf8(complete_message).unwrap();
-    }
-
     pub async fn handle_client(
         &mut self,
         client: Client,
@@ -75,17 +71,12 @@ impl Server {
                 tokio::select! {
                     // read from the client
                     read_result = reader.read_exact(&mut len_buf) => {
-                        println!("received message from client");
                         if read_result.is_err() {
                             error!("failed to read from socket");
-                            println!("failed to read from socket");
                             break;
                         }
                         let msg_len = u32::from_be_bytes(len_buf) as usize;
-
                         let mut msg_buf = vec![0u8; msg_len as usize];
-
-                        println!("message length: {}", msg_len);
                         if let Err(e) = reader.read_exact(&mut msg_buf).await {
                             error!("failed to read from socket {e}");
                             break;
@@ -94,10 +85,18 @@ impl Server {
                         let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
                         match message {
                             Ok(parsed_message) => {
+                                match parsed_message.message_type {
+                                    MessageType::Chat => {
+                                        println!("chat message");
+                                    }
+                                    MessageType::Register => {
+                                        println!("register message");
+                                    }
+                                }
+
                                 let broadcast_message = serde_json::to_string(&parsed_message).unwrap();
                                 let message_len = broadcast_message.len() as u32;
                                 let mut complete_message = message_len.to_be_bytes().to_vec();
-                                // todo add disptaching
                                 complete_message.extend_from_slice(broadcast_message.as_bytes());
                                 let broadcast_message_str = String::from_utf8(complete_message).unwrap();
                                 let res = tx.send((broadcast_message_str, client.id)); // TODO:
