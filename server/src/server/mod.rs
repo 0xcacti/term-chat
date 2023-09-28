@@ -52,8 +52,11 @@ impl Server {
                 .map_err(ServerError::TcpAccept)?;
             let client = self.register_client(addr).await?;
             self.handle_client(client, socket).await?;
-            println!("client connected -- weewoo weewoo : {}", addr);
         }
+    }
+
+    pub fn encode_message() {
+        let broadcast_message_str = String::from_utf8(complete_message).unwrap();
     }
 
     pub async fn handle_client(
@@ -85,21 +88,16 @@ impl Server {
                         println!("message length: {}", msg_len);
                         if let Err(e) = reader.read_exact(&mut msg_buf).await {
                             error!("failed to read from socket {e}");
-                            println!("failed to read exact from socket");
-                            println!("failed to read exact from socket");
-                            println!("failed to read exact from socket");
                             break;
                         }
 
-                        println!("lmessage from client");
-                        println!("lmessage from client");
-                        println!("lmessage from client");
                         let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
                         match message {
                             Ok(parsed_message) => {
                                 let broadcast_message = serde_json::to_string(&parsed_message).unwrap();
                                 let message_len = broadcast_message.len() as u32;
                                 let mut complete_message = message_len.to_be_bytes().to_vec();
+                                // todo add disptaching
                                 complete_message.extend_from_slice(broadcast_message.as_bytes());
                                 let broadcast_message_str = String::from_utf8(complete_message).unwrap();
                                 let res = tx.send((broadcast_message_str, client.id)); // TODO:
@@ -116,7 +114,6 @@ impl Server {
 
                             }
                             Err(e) => {
-                                println!("failed to parse message: {}", e);
                                 error!("failed to parse message: {}", e);
                                 break;
                             }
@@ -126,7 +123,6 @@ impl Server {
                     // read from other clients and broadcast
 
                     result = rx.recv() => {
-                        println!("received message from other client");
                         match result {
                             Ok((msg, other_id)) if client.id != other_id => {
                                 println!("everything is gonna be okay#");
@@ -146,15 +142,6 @@ impl Server {
                             }
 
                             Ok((x, y)) => {
-                                println!("we don't know what the heck is happening");
-                                println!("{}", x);
-                                println!("{}", y);
-                                println!("{}", x);
-                                println!("{}", y);
-                                println!("{}", x);
-                                println!("{}", y);
-                                println!("{}", client.id);
-                                println!("we don't know what the heck is happening");
                                 break;
                             }
 
@@ -174,7 +161,6 @@ mod test {
     use crate::message::MessageType;
     use std::sync::atomic::{AtomicU16, Ordering};
     use tokio::task::JoinHandle;
-    use tokio::time::{sleep, Duration};
 
     static NEXT_PORT: AtomicU16 = AtomicU16::new(8000);
 
