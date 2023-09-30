@@ -2,10 +2,10 @@ use server::server::Server;
 
 #[tokio::main]
 async fn main() {
-    let server = Server::new("localhost:8080").await;
+    let server = Server::new("127.0.0.1:8080").await;
     match server {
         Ok(mut server) => {
-            println!("server created, starting");
+            println!("server created, starting on localhost:8080");
             match server.run().await {
                 Ok(_) => {
                     println!("server finished");

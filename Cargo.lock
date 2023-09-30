@@ -195,7 +195,9 @@ dependencies = [
  "anyhow",
  "clap",
  "figment",
+ "log",
  "serde",
+ "serde_json",
  "tokio",
 ]
 

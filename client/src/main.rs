@@ -1,5 +1,5 @@
 use clap::{crate_version, Parser, Subcommand};
-use client::Config;
+use client::{connect, Config};
 use figment::{providers::Env, Figment};
 use std::{env, process};
 
@@ -23,6 +23,13 @@ enum Commands {
         #[arg(required = true, short, long)]
         password: String,
     },
+
+    /// Send a message
+    Send {
+        /// The message to send
+        #[arg(required = true, short, long)]
+        message: String,
+    },
 }
 
 #[tokio::main]
@@ -37,8 +44,11 @@ async fn main() {
     // handle commands
     match &args.command {
         Some(Commands::Auth { username, password }) => {
-            config.username = username.clone();
-            config.password = password.clone();
+            config.username = Some(username.to_string());
+            config.password = Some(password.to_string());
+        }
+        Some(Commands::Send { message }) => {
+            connect().await.unwrap();
         }
         None => {
             eprintln!("No command provided");
