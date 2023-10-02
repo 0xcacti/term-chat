@@ -5,8 +5,11 @@ use log::error;
 use message::{Message, MessageType};
 use serde::Deserialize;
 use tokio::{
-    io::{self, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{
+        self, stdin, stdout, AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader,
+    },
     net::TcpStream,
+    task,
 };
 
 #[derive(Debug, Deserialize)]
@@ -70,38 +73,45 @@ pub async fn connect() -> Result<()> {
                     eprintln!("Failed to parse message: {}", e);
                 }
             }
+            stdout().flush().await.unwrap();
+            tokio::task::yield_now().await;
         }
     });
 
     let write_task = tokio::spawn(async move {
-        let mut reader = BufReader::new(io::stdin());
+        let mut reader = BufReader::new(stdin());
         loop {
-            let mut line = String::new();
-            if reader.read_line(&mut line).await.is_err() {
-                error!("Failed to read from stdin");
-                continue; // Continue waiting for new input
+            let mut input_buffer = Vec::new();
+            // Wait for input from the terminal
+            println!("Enter text to send: ");
+            stdout().flush().await.unwrap();
+
+            if reader.read_until(b'\n', &mut input_buffer).await.is_err() {
+                eprintln!("Failed to read from stdin");
+                break;
             }
 
-            let trimmed_line = line.trim();
-            if !trimmed_line.is_empty() {
-                println!("Sending message: {}", trimmed_line);
-
-                let chat_message = Message {
-                    message_type: MessageType::Chat,
-                    payload: trimmed_line.to_string(),
-                    // other fields
-                };
-
-                let encoded_message = chat_message.encode();
-                if let Err(e) = writer.write_all(&encoded_message).await {
-                    error!("Failed to write to socket: {}", e);
-                    line.clear();
-                    return;
+            let message_str = match String::from_utf8(input_buffer.clone()) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("Invalid UTF-8 sequence: {}", e);
+                    continue;
                 }
+            };
+
+            let message = Message::new(MessageType::Chat, message_str);
+            let serialized_message = message.encode();
+
+            // Write the input to the writer
+            if let Err(e) = writer.write_all(&serialized_message).await {
+                eprintln!("Failed to write to socket: {}", e);
+                break;
             }
-            line.clear();
+
+            tokio::task::yield_now().await;
         }
     });
+
     // Optionally, you can await these tasks if you want the main function to wait for them.
     let result = tokio::try_join!(read_task, write_task);
     if let Err(e) = result {
