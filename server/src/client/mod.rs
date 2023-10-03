@@ -29,11 +29,11 @@ pub struct Client {
     pub id: Uuid,
     pub state: ClientState,
     pub addr: std::net::SocketAddr,
-    pub tx: broadcast::Sender<(String, Uuid)>,
+    pub tx: broadcast::Sender<(Vec<u8>, Uuid)>,
 }
 
 impl Client {
-    pub fn new(addr: std::net::SocketAddr, tx: broadcast::Sender<(String, Uuid)>) -> Self {
+    pub fn new(addr: std::net::SocketAddr, tx: broadcast::Sender<(Vec<u8>, Uuid)>) -> Self {
         Self {
             id: Uuid::new_v4(),
             state: ClientState::Anonymous,

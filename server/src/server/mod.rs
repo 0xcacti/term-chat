@@ -6,7 +6,7 @@ use log::error;
 use tokio::io::AsyncReadExt;
 use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
-use tokio::sync::broadcast;
+use tokio::sync::broadcast::{self, Receiver, Sender};
 use tokio::{io::AsyncWriteExt, net::TcpListener};
 use uuid::Uuid;
 
@@ -17,7 +17,7 @@ use crate::message::{Message, MessageType};
 pub struct Server {
     listener: TcpListener,
     clients: HashMap<Uuid, Client>,
-    broadcast_tx: broadcast::Sender<(String, Uuid)>,
+    broadcast_tx: broadcast::Sender<(Vec<u8>, Uuid)>,
 }
 
 impl Server {
@@ -63,97 +63,89 @@ impl Server {
     ) -> Result<(), ServerError> {
         let tx = self.broadcast_tx.clone();
         let mut rx = tx.subscribe();
-        let mut len_buf = [0u8; 4];
         println!("meow");
 
         tokio::spawn(async move {
             let (mut reader, mut writer) = socket.split();
             loop {
                 tokio::select! {
-                    // read from the client
-                    read_result = reader.read_exact(&mut len_buf) => {
-                        println!("meow -- we are here -- --- ");
-                        println!("read result -- we are here ");
-                        if read_result.is_err() {
-                            error!("failed to read from socket");
+                    read_result = read_from_cilent(tx.clone(), &mut reader, &client) => {
+                        if let Err(e) = read_result {
+                            error!("failed to read from client: {}", e);
                             break;
-                        }
-                        let msg_len = u32::from_be_bytes(len_buf) as usize;
-                        let mut msg_buf = vec![0u8; msg_len as usize];
-                        if let Err(e) = reader.read_exact(&mut msg_buf).await {
-                            println!("error reading from socket");
-                            error!("failed to read from socket {e}");
-                            break;
-                        }
-
-                        let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
-                        match message {
-                            Ok(parsed_message) => {
-                                match parsed_message.message_type {
-                                    MessageType::Chat => {
-                                        println!("chat message");
-                                    }
-                                    MessageType::Register => {
-                                        println!("register message");
-                                    }
-                                }
-
-                                let broadcast_message = serde_json::to_string(&parsed_message).unwrap();
-                                let message_len = broadcast_message.len() as u32;
-                                let mut complete_message = message_len.to_be_bytes().to_vec();
-                                complete_message.extend_from_slice(broadcast_message.as_bytes());
-                                let broadcast_message_str = String::from_utf8(complete_message).unwrap();
-                                let res = tx.send((broadcast_message_str, client.id)); // TODO:
-                                                                                         // emoji?
-                                match res {
-                                    Ok(_) => println!("everything is gonna be okay in the end"),
-                                    Err(e) => {
-                                        println!("error sending this hoe");
-                                        error!("failed to broadcast message {}", e);
-                                        break;
-                                    }
-                                }
-
-                            }
-                            Err(e) => {
-                                println!("error parsing this hoe");
-                                error!("failed to parse message: {}", e);
-                                break;
-                            }
                         }
                     }
 
-                    // read from other clients and broadcast
-
-                    result = rx.recv() => {
-                        match result {
-                            Ok((msg, other_id)) => {
-                                if client.id != other_id {
-                                    println!("everything is gonna be okay#");
-                                    if writer.write_all(msg.as_bytes()).await.is_err() {
-                                        error!("failed to write to socket");
-                                        break;
-                                    }
-                                } else {
-                                    println!("everything is gonna be okay");
-                                }
-                            },
-                            Err(broadcast::error::RecvError::Lagged(_)) => {
-                                error!("lagged");
-                                break;
-                            },
-                            Err(broadcast::error::RecvError::Closed) => {
-                                error!("channel closed");
-                                break;
-                            },
+                    write_result = send_to_client(&mut rx, &mut writer, &client) => {
+                        if let Err(e) = write_result {
+                            error!("failed to write to client: {}", e);
+                            break;
                         }
                     }
+
                 }
             }
         });
 
         Ok(())
     }
+}
+async fn send_to_client(
+    rx: &mut Receiver<(Vec<u8>, Uuid)>,
+    writer: &mut WriteHalf<'_>,
+    client: &Client,
+) -> Result<(), ServerError> {
+    let result = rx.recv().await;
+    match result {
+        Ok((msg, other_id)) => {
+            if client.id != other_id {
+                println!("everything is gonna be okay#");
+                if writer.write_all(&msg).await.is_err() {
+                    error!("failed to write to socket");
+                }
+            } else {
+                println!("everything is gonna be okay");
+            }
+        }
+        Err(broadcast::error::RecvError::Lagged(_)) => {
+            error!("lagged");
+        }
+        Err(broadcast::error::RecvError::Closed) => {
+            error!("channel closed");
+        }
+    }
+    Ok(())
+}
+
+async fn read_from_cilent(
+    tx: Sender<(Vec<u8>, Uuid)>,
+    reader: &mut ReadHalf<'_>,
+    client: &Client,
+) -> Result<(), ServerError> {
+    let mut len_buf = [0u8; 4];
+    reader.read_exact(&mut len_buf).await.unwrap(); // TODO: handle error
+    let msg_len = u32::from_be_bytes(len_buf) as usize;
+    let mut msg_buf = vec![0u8; msg_len as usize];
+    if let Err(e) = reader.read_exact(&mut msg_buf).await {
+        error!("failed to read from socket {e}");
+    }
+
+    let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
+    match message {
+        Ok(parsed_message) => match parsed_message.message_type {
+            MessageType::Chat => {
+                println!("chat message");
+                tx.send((parsed_message.encode(), client.id)).unwrap();
+            }
+            MessageType::Register => {
+                println!("register message");
+            }
+        },
+        Err(e) => {
+            error!("failed to parse message: {}", e);
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
