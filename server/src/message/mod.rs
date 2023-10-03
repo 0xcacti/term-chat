@@ -28,10 +28,4 @@ impl Message {
         message_buf.extend_from_slice(message_json.as_bytes());
         message_buf
     }
-
-    pub fn decode(mut encoded: Vec<u8>) -> Self {
-        let 
-
-    }
-
 }
