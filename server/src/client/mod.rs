@@ -1,19 +1,4 @@
 pub mod error;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum ServerError {
-    #[error("Failed to bind to address")]
-    TcpBind(#[source] std::io::Error),
-
-    #[error("Failed to accept incoming connection")]
-    TcpAccept(#[source] std::io::Error),
-
-    #[error("Failed to register client")]
-    RegisterClient,
-}
-
-use self::error::ClientError;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 

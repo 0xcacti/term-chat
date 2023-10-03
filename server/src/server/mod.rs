@@ -90,6 +90,7 @@ impl Server {
         Ok(())
     }
 }
+
 async fn send_to_client(
     rx: &mut Receiver<(Vec<u8>, Uuid)>,
     writer: &mut WriteHalf<'_>,
@@ -211,7 +212,6 @@ mod test {
         let mut client = TcpStream::connect(server_address).await.unwrap();
         let message_buf = get_test_chat_message();
         client.write_all(&message_buf).await.unwrap();
-
         server_handle.abort();
     }
 
@@ -228,7 +228,6 @@ mod test {
         read_and_validate_message(&mut client_two).await;
         client_one.write_all(&message_buf.clone()).await.unwrap();
         read_and_validate_message(&mut client_two).await;
-
         server_handle.abort();
     }
 }
