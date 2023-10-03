@@ -164,13 +164,7 @@ mod test {
 
     fn get_test_chat_message() -> Vec<u8> {
         let message = Message::new(MessageType::Chat, "hello".to_string());
-        let message_json = serde_json::to_string(&message).unwrap();
-        let message_len = message_json.len() as u32;
-        let message_len_buf = message_len.to_be_bytes().to_vec();
-
-        let mut message_buf = message_len_buf;
-        message_buf.extend_from_slice(message_json.as_bytes());
-        message_buf
+        message.encode()
     }
     async fn setup(server_address: &str) -> JoinHandle<()> {
         let mut server = Server::new(server_address).await.unwrap();
@@ -178,6 +172,25 @@ mod test {
             server.run().await.unwrap();
         });
         server_handle
+    }
+
+    async fn read_and_validate_message(client: &mut TcpStream) {
+        let mut len_buf = [0u8; 4];
+        client.read_exact(&mut len_buf).await.unwrap();
+        let msg_len = u32::from_be_bytes(len_buf) as usize;
+
+        let mut msg_buf = vec![0u8; msg_len];
+        client.read_exact(&mut msg_buf).await.unwrap();
+        let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
+        match received_message {
+            Ok(message) => {
+                assert_eq!(message.message_type, MessageType::Chat);
+                assert_eq!(message.payload, "hello");
+            }
+            Err(e) => {
+                panic!("failed to parse message: {}", e);
+            }
+        }
     }
 
     #[tokio::test]
@@ -210,69 +223,11 @@ mod test {
         let mut client_two = TcpStream::connect(&server_address).await.unwrap();
         let message_buf = get_test_chat_message();
         client_one.write_all(&message_buf.clone()).await.unwrap();
-
-        let mut len_buf = [0u8; 4];
-        client_two.read_exact(&mut len_buf).await.unwrap();
-        let msg_len = u32::from_be_bytes(len_buf) as usize;
-
-        let mut msg_buf = vec![0u8; msg_len];
-        client_two.read_exact(&mut msg_buf).await.unwrap();
-
-        let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
-        match received_message {
-            Ok(message) => {
-                assert_eq!(message.message_type, MessageType::Chat);
-                assert_eq!(message.payload, "hello");
-            }
-            Err(e) => {
-                panic!("failed to parse message: {}", e);
-            }
-        }
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        println!("meow -- we are sending the next message");
-        let message_buf = get_test_chat_message();
+        read_and_validate_message(&mut client_two).await;
         client_one.write_all(&message_buf.clone()).await.unwrap();
-        println!("meow -- we successfully wrote the next message");
-
-        let mut len_buf = [0u8; 4];
-        client_two.read_exact(&mut len_buf).await.unwrap();
-        let msg_len = u32::from_be_bytes(len_buf) as usize;
-        println!("meow -- we read the message length");
-
-        let mut msg_buf = vec![0u8; msg_len];
-        client_two.read_exact(&mut msg_buf).await.unwrap();
-
-        let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
-        match received_message {
-            Ok(message) => {
-                assert_eq!(message.message_type, MessageType::Chat);
-                assert_eq!(message.payload, "hello");
-            }
-            Err(e) => {
-                panic!("failed to parse message: {}", e);
-            }
-        }
-        let message_buf = get_test_chat_message();
+        read_and_validate_message(&mut client_two).await;
         client_one.write_all(&message_buf.clone()).await.unwrap();
-
-        let mut len_buf = [0u8; 4];
-        client_two.read_exact(&mut len_buf).await.unwrap();
-        let msg_len = u32::from_be_bytes(len_buf) as usize;
-
-        let mut msg_buf = vec![0u8; msg_len];
-        client_two.read_exact(&mut msg_buf).await.unwrap();
-
-        let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
-        match received_message {
-            Ok(message) => {
-                assert_eq!(message.message_type, MessageType::Chat);
-                assert_eq!(message.payload, "hello");
-            }
-            Err(e) => {
-                panic!("failed to parse message: {}", e);
-            }
-        }
+        read_and_validate_message(&mut client_two).await;
 
         server_handle.abort();
     }

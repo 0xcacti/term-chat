@@ -41,10 +41,4 @@ impl Client {
             tx,
         }
     }
-
-    pub fn register(&mut self, username: String) -> Result<(), ClientError> {
-        // is registered
-        self.state = ClientState::Registered { username };
-        Ok(())
-    }
 }
