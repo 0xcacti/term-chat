@@ -1,7 +1,10 @@
 pub mod error;
 
-use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 
+use axum::routing::get;
+use axum::Router;
 use log::error;
 use tokio::io::AsyncReadExt;
 use tokio::net::tcp::{ReadHalf, WriteHalf};
@@ -10,142 +13,27 @@ use tokio::sync::broadcast::{self, Receiver, Sender};
 use tokio::{io::AsyncWriteExt, net::TcpListener};
 use uuid::Uuid;
 
-use self::error::ServerError;
-use crate::client::Client;
 use crate::message::{Message, MessageType};
 
-pub struct Server {
-    listener: TcpListener,
-    clients: HashMap<Uuid, Client>,
-    broadcast_tx: broadcast::Sender<(Vec<u8>, Uuid)>,
+struct AppState {
+    user_set: Mutex<HashSet<String>>,
+    tx: broadcast::Sender<String>,
 }
 
-impl Server {
-    pub async fn new(addr: &str) -> Result<Self, ServerError> {
-        let listener = TcpListener::bind(addr)
-            .await
-            .map_err(ServerError::TcpBind)?;
-        let clients = HashMap::new();
-        let (broadcast_tx, _) = broadcast::channel(100);
+async fn start() -> Result<(), error::ServerError> {
+    let user_set = Mutex::new(HashSet::new());
+    let (tx, _) = broadcast::channel(100);
+    let app_state = Arc::new(AppState { user_set, tx });
+    let app = Router::new()
+        .route("/", get(index))
+        .route("/ws", get(websocket_handler))
+        .with_state(app_state);
+    let listener = TcpListener::bind("127.0.0.1:8080").await.map_err(|e| {
+        error!("failed to bind to socket; err = {:?}", e);
+        error::ServerError::TcpBind(e)
+    })?;
+    axum::serve(listener, app).await.unwrap();
 
-        Ok(Self {
-            listener,
-            clients,
-            broadcast_tx,
-        })
-    }
-
-    pub async fn register_client(
-        &mut self,
-        addr: std::net::SocketAddr,
-    ) -> Result<Client, ServerError> {
-        let client = Client::new(addr, self.broadcast_tx.clone());
-        self.clients.insert(client.id, client.clone());
-        Ok(client)
-    }
-
-    pub async fn run(&mut self) -> Result<(), ServerError> {
-        loop {
-            let (socket, addr) = self
-                .listener
-                .accept()
-                .await
-                .map_err(ServerError::TcpAccept)?;
-            let client = self.register_client(addr).await?;
-            self.handle_client(client, socket).await?;
-        }
-    }
-
-    pub async fn handle_client(
-        &mut self,
-        client: Client,
-        mut socket: TcpStream,
-    ) -> Result<(), ServerError> {
-        let tx = self.broadcast_tx.clone();
-        let mut rx = tx.subscribe();
-        println!("meow");
-
-        tokio::spawn(async move {
-            let (mut reader, mut writer) = socket.split();
-            loop {
-                tokio::select! {
-                    read_result = read_from_cilent(tx.clone(), &mut reader, &client) => {
-                        if let Err(e) = read_result {
-                            error!("failed to read from client: {}", e);
-                            break;
-                        }
-                    }
-
-                    write_result = send_to_client(&mut rx, &mut writer, &client) => {
-                        if let Err(e) = write_result {
-                            error!("failed to write to client: {}", e);
-                            break;
-                        }
-                    }
-
-                }
-            }
-        });
-
-        Ok(())
-    }
-}
-
-async fn send_to_client(
-    rx: &mut Receiver<(Vec<u8>, Uuid)>,
-    writer: &mut WriteHalf<'_>,
-    client: &Client,
-) -> Result<(), ServerError> {
-    let result = rx.recv().await;
-    match result {
-        Ok((msg, other_id)) => {
-            if client.id != other_id {
-                println!("everything is gonna be okay#");
-                if writer.write_all(&msg).await.is_err() {
-                    error!("failed to write to socket");
-                }
-            } else {
-                println!("everything is gonna be okay");
-            }
-        }
-        Err(broadcast::error::RecvError::Lagged(_)) => {
-            error!("lagged");
-        }
-        Err(broadcast::error::RecvError::Closed) => {
-            error!("channel closed");
-        }
-    }
-    Ok(())
-}
-
-async fn read_from_cilent(
-    tx: Sender<(Vec<u8>, Uuid)>,
-    reader: &mut ReadHalf<'_>,
-    client: &Client,
-) -> Result<(), ServerError> {
-    let mut len_buf = [0u8; 4];
-    reader.read_exact(&mut len_buf).await.unwrap(); // TODO: handle error
-    let msg_len = u32::from_be_bytes(len_buf) as usize;
-    let mut msg_buf = vec![0u8; msg_len as usize];
-    if let Err(e) = reader.read_exact(&mut msg_buf).await {
-        error!("failed to read from socket {e}");
-    }
-
-    let message: Result<Message, _> = serde_json::from_slice(&msg_buf);
-    match message {
-        Ok(parsed_message) => match parsed_message.message_type {
-            MessageType::Chat => {
-                println!("chat message");
-                tx.send((parsed_message.encode(), client.id)).unwrap();
-            }
-            MessageType::Register => {
-                println!("register message");
-            }
-        },
-        Err(e) => {
-            error!("failed to parse message: {}", e);
-        }
-    }
     Ok(())
 }
 

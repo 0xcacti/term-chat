@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
+axum = "0.6.20"
 log = "0.4.20"
 protobuf = "3.2.0"
 rusqlite = "0.29.0"
