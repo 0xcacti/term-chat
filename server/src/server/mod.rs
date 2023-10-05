@@ -23,30 +23,17 @@ struct Server {
 }
 
 impl Server {
-    pub async fn start() -> Result<(), error::ServerError> {
+    pub fn new(server_address: &str) -> Result<Self, error::ServerError> {
+        let (tx, _) = broadcast::channel(10);
         let user_set = Mutex::new(HashSet::new());
-        let (tx, _) = broadcast::channel(100);
-        let app_state = Arc::new(AppState { user_set, tx });
-        let app = Router::new()
-            .route("/", get(index))
-            .route("/ws", get(websocket_handler))
-            .with_state(app_state);
-        axum::Server::bind(&"127.0.0.1:8080".parse().unwrap())
-            .serve(app.into_make_service())
-            .await
-            .unwrap();
-
-        Ok(())
+        Ok(Self { user_set, tx })
     }
 
-    async fn websocket_handler(
-        ws: WebSocketUpgrade,
-        State(app_state): State<Arc<AppState>>,
-    ) -> impl IntoResponse {
-        ws.on_upgrade(|socket| websocket(socket, app_state))
+    async fn websocket_handler(&self, ws: WebSocketUpgrade) -> impl IntoResponse {
+        ws.on_upgrade(|socket| self.websocket(socket))
     }
 
-    async fn websocket(stream: WebSocket, state: Arc<AppState>) {
+    async fn websocket(&mut self, stream: WebSocket) {
         let (mut sender, mut receiver) = stream.split();
         let mut username = String::new();
         while let Some(Ok(message)) = receiver.next().await {
