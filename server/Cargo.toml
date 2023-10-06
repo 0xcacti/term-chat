@@ -22,4 +22,5 @@ uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 tower = { version = "0.4", features = ["util"] }
 tracing-subscriber = "0.3.17"
 tracing = "0.1.37"
+clap = "4.4.6"
 
