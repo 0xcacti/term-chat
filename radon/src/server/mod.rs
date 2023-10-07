@@ -41,7 +41,7 @@ impl Server {
         })
     }
 
-    pub fn start(&mut self) -> Result<(), error::ServerError> {
+    pub async fn run(&mut self) -> Result<(), error::ServerError> {
         // self.router = self.router.route("/", get(api::index));
         println!("starting server on {}", self.address);
         Ok(())

@@ -884,6 +884,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "radon"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "figment",
+ "futures",
+ "log",
+ "protobuf",
+ "rusqlite",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "rand"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1020,30 +1044,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "figment",
- "futures",
- "log",
- "protobuf",
- "rusqlite",
- "serde",
- "serde_derive",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-util",
- "tower",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
