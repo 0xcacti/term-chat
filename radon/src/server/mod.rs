@@ -2,27 +2,18 @@ pub mod error;
 
 use axum::Router;
 use clap::Parser;
+use figment::{
+    providers::Format,
+    value::{Dict, Map},
+    Error, Figment, Metadata, Profile, Provider,
+};
+use serde::Serialize;
 use serde_derive::Deserialize;
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
 use tokio::sync::broadcast;
-
-#[derive(Debug, Deserialize)]
-pub struct ServerConfig {
-    pub address: String,
-    pub ws_enabled: Option<bool>,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            address: "127.0.0.1:8080".to_string(),
-            ws_enabled: None,
-        }
-    }
-}
 
 #[derive(Debug, Parser)]
 pub struct RunArgs {
@@ -34,6 +25,21 @@ pub struct RunArgs {
     ws: Option<bool>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ServerConfig {
+    pub address: String,
+    pub ws_enabled: Option<bool>,
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1:8080 -- my default".to_string(),
+            ws_enabled: Some(true),
+        }
+    }
+}
+
 impl ServerConfig {
     pub fn merge_with_args(&mut self, args: &RunArgs) {
         if let Some(address) = &args.address {
@@ -42,6 +48,33 @@ impl ServerConfig {
         if let Some(ws_enabled) = &args.ws {
             self.ws_enabled = Some(*ws_enabled);
         }
+    }
+
+    pub fn from<T: Provider>(provider: T) -> Result<ServerConfig, error::ServerError> {
+        Figment::from(provider)
+            .extract()
+            .map_err(error::ServerError::ConfigError)
+    }
+
+    pub fn figment() -> Figment {
+        use figment::providers::{Env, Toml};
+        Figment::from(Self::default())
+            .merge(Toml::file("radon.toml"))
+            .merge(Env::prefixed("RADON_"))
+    }
+}
+
+impl Provider for ServerConfig {
+    fn metadata(&self) -> Metadata {
+        Metadata::named("Radon Server Config")
+    }
+
+    fn data(&self) -> Result<Map<Profile, Dict>, Error> {
+        figment::providers::Serialized::defaults(ServerConfig::default()).data()
+    }
+
+    fn profile(&self) -> Option<Profile> {
+        None
     }
 }
 

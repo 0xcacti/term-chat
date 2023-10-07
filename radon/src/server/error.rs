@@ -10,4 +10,7 @@ pub enum ServerError {
 
     #[error("Failed to register client")]
     RegisterClient,
+
+    #[error("Invalid configuration")]
+    ConfigError(#[source] figment::Error),
 }

@@ -21,11 +21,7 @@ enum Commands {
 
 #[tokio::main]
 async fn main() {
-    let mut config: ServerConfig = Figment::new()
-        .merge(Toml::file("radon.toml"))
-        .merge(Env::prefixed("SERVER_"))
-        .extract()
-        .unwrap();
+    let mut config = ServerConfig::from(ServerConfig::figment()).unwrap();
 
     let args = App::parse();
 
