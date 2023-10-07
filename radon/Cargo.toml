@@ -1,5 +1,5 @@
 [package]
-name = "server"
+name = "radon"
 version = "0.1.0"
 edition = "2021"
 
@@ -23,4 +23,5 @@ tower = { version = "0.4", features = ["util"] }
 tracing-subscriber = "0.3.17"
 tracing = "0.1.37"
 clap = "4.4.6"
+figment = "0.10.11"
 

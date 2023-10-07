@@ -1,13 +1,15 @@
 pub mod error;
 
-use axum::{routing::get, Router};
+use axum::Router;
+use serde_derive::Deserialize;
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
 use tokio::sync::broadcast;
 
-use crate::api;
+#[derive(Debug, Deserialize)]
+pub struct ServerConfig {}
 
 pub struct Server {
     address: String,
@@ -40,7 +42,8 @@ impl Server {
     }
 
     pub fn start(&mut self) -> Result<(), error::ServerError> {
-        self.router = self.router.route("/", get(api::index));
+        // self.router = self.router.route("/", get(api::index));
+        println!("starting server on {}", self.address);
         Ok(())
     }
 }
