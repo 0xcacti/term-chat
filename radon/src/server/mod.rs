@@ -1,6 +1,6 @@
 pub mod error;
 
-use axum::Router;
+use axum::{routing::get, Router};
 use clap::Parser;
 use figment::{
     providers::Format,
