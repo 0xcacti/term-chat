@@ -1,6 +1,7 @@
 pub mod error;
 
 use axum::Router;
+use clap::Parser;
 use serde_derive::Deserialize;
 use std::{
     collections::HashSet,
@@ -9,10 +10,43 @@ use std::{
 use tokio::sync::broadcast;
 
 #[derive(Debug, Deserialize)]
-pub struct ServerConfig {}
+pub struct ServerConfig {
+    pub address: String,
+    pub ws_enabled: Option<bool>,
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1:8080".to_string(),
+            ws_enabled: None,
+        }
+    }
+}
+
+#[derive(Debug, Parser)]
+pub struct RunArgs {
+    /// The address to run the server on including port
+    #[arg(long = "address", value_name = "address:port")]
+    address: Option<String>,
+    // Enable websocket server
+    #[arg(long = "websocket", value_name = "ws_enabled")]
+    ws: Option<bool>,
+}
+
+impl ServerConfig {
+    pub fn merge_with_args(&mut self, args: &RunArgs) {
+        if let Some(address) = &args.address {
+            self.address = address.clone();
+        }
+        if let Some(ws_enabled) = &args.ws {
+            self.ws_enabled = Some(*ws_enabled);
+        }
+    }
+}
 
 pub struct Server {
-    address: String,
+    config: ServerConfig,
     router: Router,
     state: Arc<AppState>,
 }
@@ -31,11 +65,11 @@ impl AppState {
 }
 
 impl Server {
-    pub fn new(server_address: &str) -> Result<Self, error::ServerError> {
+    pub fn new(config: ServerConfig) -> Result<Self, error::ServerError> {
         let state = Arc::new(AppState::new());
         let router = Router::new();
         Ok(Self {
-            address: server_address.to_string(),
+            config,
             router,
             state,
         })
@@ -43,7 +77,7 @@ impl Server {
 
     pub async fn run(&mut self) -> Result<(), error::ServerError> {
         // self.router = self.router.route("/", get(api::index));
-        println!("starting server on {}", self.address);
+        println!("starting server on {:?}", self.config.address);
         Ok(())
     }
 }
