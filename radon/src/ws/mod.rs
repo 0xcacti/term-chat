@@ -1,10 +1,34 @@
+use std::sync::Arc;
+
+use axum::{
+    extract::{
+        ws::{Message, WebSocket},
+        State, WebSocketUpgrade,
+    },
+    response::IntoResponse,
+    routing::get,
+    Router,
+};
+use futures::{SinkExt, StreamExt};
+
+use crate::server::AppState;
+
 pub mod error;
 
-async fn websocket_handler(&self, ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(|socket| self.websocket(socket))
+pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/ws", get(websocket_handler))
+        .with_state(state)
 }
 
-async fn websocket(&mut self, stream: WebSocket) {
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    ws.on_upgrade(|socket| websocket(state, socket))
+}
+
+async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let (mut sender, mut receiver) = stream.split();
     let mut username = String::new();
     while let Some(Ok(message)) = receiver.next().await {

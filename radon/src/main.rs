@@ -1,9 +1,5 @@
 use clap::{crate_version, Parser, Subcommand};
-use figment::{
-    providers::{Env, Format, Toml},
-    Figment,
-};
-use radon::server::{self, Server, ServerConfig};
+use radon::server::{RunArgs, Server, ServerConfig};
 use std::{env, process};
 
 #[derive(Debug, Parser)]
@@ -16,7 +12,7 @@ struct App {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    Run(server::RunArgs),
+    Run(RunArgs),
 }
 
 #[tokio::main]

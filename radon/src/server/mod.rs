@@ -15,6 +15,8 @@ use std::{
 };
 use tokio::sync::broadcast;
 
+use crate::{api, ws};
+
 #[derive(Debug, Parser)]
 pub struct RunArgs {
     /// The address to run the server on including port
@@ -85,8 +87,8 @@ pub struct Server {
 }
 
 pub struct AppState {
-    user_set: Mutex<HashSet<String>>,
-    tx: broadcast::Sender<String>,
+    pub user_set: Mutex<HashSet<String>>,
+    pub tx: broadcast::Sender<String>,
 }
 
 impl AppState {
@@ -98,19 +100,33 @@ impl AppState {
 }
 
 impl Server {
-    pub fn new(config: ServerConfig) -> Result<Self, error::ServerError> {
+    pub fn new(config: ServerConfig) -> Self {
         let state = Arc::new(AppState::new());
         let router = Router::new();
-        Ok(Self {
+        Self {
             config,
             router,
             state,
-        })
+        }
     }
 
     pub async fn run(&mut self) -> Result<(), error::ServerError> {
         // self.router = self.router.route("/", get(api::index));
-        println!("starting server on {:?}", self.config.address);
+
+        // steps -
+        // start rest API
+        // if enabled start ws api
+        // listen for shutdown signal and shutdown gracefully
+        if let Some(ws_enabled) = self.config.ws_enabled {
+            if ws_enabled {
+                self.router
+                    .nest("/", api::routes())
+                    .nest("/ws", ws::routes(self.state.clone()));
+            } else {
+                self.router.nest("/", api::routes());
+            }
+        }
+
         Ok(())
     }
 }
