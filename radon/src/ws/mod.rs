@@ -16,8 +16,10 @@ use crate::server::AppState;
 pub mod error;
 
 pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+    let route_prefix = "/ws";
+
     Router::new()
-        .route("/ws", get(websocket_handler))
+        .route(route_prefix, get(websocket_handler))
         .with_state(state)
 }
 

@@ -1,6 +1,6 @@
 pub mod error;
 
-use axum::{routing::get, Router};
+use axum::{routing::get, Router, Server};
 use clap::Parser;
 use figment::{
     providers::Format,
@@ -80,12 +80,6 @@ impl Provider for ServerConfig {
     }
 }
 
-pub struct Server {
-    config: ServerConfig,
-    router: Router,
-    state: Arc<AppState>,
-}
-
 pub struct AppState {
     pub user_set: Mutex<HashSet<String>>,
     pub tx: broadcast::Sender<String>,
@@ -99,36 +93,30 @@ impl AppState {
     }
 }
 
-impl Server {
-    pub fn new(config: ServerConfig) -> Self {
-        let state = Arc::new(AppState::new());
-        let router = Router::new();
-        Self {
-            config,
-            router,
-            state,
-        }
-    }
+pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
+    // self.router = self.router.route("/", get(api::index));
 
-    pub async fn run(&mut self) -> Result<(), error::ServerError> {
-        // self.router = self.router.route("/", get(api::index));
+    // steps -
+    // start rest API
+    // if enabled start ws api
+    // listen for shutdown signal and shutdown gracefully
+    let state = Arc::new(AppState::new());
 
-        // steps -
-        // start rest API
-        // if enabled start ws api
-        // listen for shutdown signal and shutdown gracefully
-        if let Some(ws_enabled) = self.config.ws_enabled {
-            if ws_enabled {
-                self.router
-                    .nest("/", api::routes())
-                    .nest("/ws", ws::routes(self.state.clone()));
-            } else {
-                self.router.nest("/", api::routes());
-            }
-        }
+    // Create the API routes
+    let api_routes = api::routes();
+    let ws_routes = ws::routes(state.clone());
 
-        Ok(())
-    }
+    let app = api_routes.nest("/", ws_routes).with_state(state);
+
+    // Bind to the address and serve the application
+    let addr = config.address.parse().unwrap();
+    println!("Listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+    // Finally, set the state
+    Ok(())
 }
 
 // #[cfg(test)]

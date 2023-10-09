@@ -1,5 +1,5 @@
 use clap::{crate_version, Parser, Subcommand};
-use radon::server::{RunArgs, Server, ServerConfig};
+use radon::server::{self, RunArgs, ServerConfig};
 use std::{env, process};
 
 #[derive(Debug, Parser)]
@@ -25,8 +25,7 @@ async fn main() {
     match &args.command {
         Some(Commands::Run(arguments)) => {
             config.merge_with_args(arguments);
-            let mut server = Server::new(config).unwrap();
-            server.run().await.unwrap();
+            server::run(config).await.unwrap();
         }
         None => {
             eprintln!("No command provided");
