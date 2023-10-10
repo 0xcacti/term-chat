@@ -35,7 +35,7 @@ async fn websocket_handler(
 
 async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let (mut sender, mut receiver) = stream.split();
-    let mut username = String::new();
+    let username = String::new();
     // check that user exists
 
     let mut rx = state.tx.subscribe();
