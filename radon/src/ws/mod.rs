@@ -47,7 +47,8 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
 
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
-            if sender.send(Message::Text(msg.text)).await.is_err() {
+            let serialized = serde_json::to_string(&msg).unwrap();
+            if sender.send(Message::Text(serialized)).await.is_err() {
                 break;
             }
         }
@@ -56,7 +57,7 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let name = username.clone();
     let mut receive_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(msg))) = receiver.next().await {
-            let msg = TextMessage::new(MessageType::Text, Some(name.clone()), msg);
+            let msg: TextMessage = serde_json::from_str(&msg).unwrap();
             let _ = tx.send(msg);
         }
     });
