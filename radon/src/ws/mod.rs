@@ -83,11 +83,3 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let _ = state.tx.send(msg);
     state.user_set.lock().unwrap().remove(&username);
 }
-
-fn check_username(state: &AppState, username: &mut String, name: &str) {
-    let mut user_set = state.user_set.lock().unwrap();
-    if !user_set.contains(name) {
-        user_set.insert(name.to_string());
-        username.push_str(name);
-    }
-}
