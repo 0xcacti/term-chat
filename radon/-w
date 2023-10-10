@@ -18,7 +18,7 @@ use tokio::{
     sync::broadcast,
 };
 
-use crate::{api, message::TextMessage, ws};
+use crate::{api, message::Message, ws};
 
 #[derive(Debug, Parser)]
 pub struct RunArgs {
@@ -85,7 +85,7 @@ impl Provider for ServerConfig {
 
 pub struct AppState {
     pub user_set: Mutex<HashSet<String>>,
-    pub tx: broadcast::Sender<TextMessage>,
+    pub tx: broadcast::Sender<Message>,
 }
 
 impl AppState {
@@ -129,7 +129,7 @@ pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::message::{MessageType, TextMessage};
+    use crate::message::{Message, MessageType};
     use std::sync::atomic::{AtomicU16, Ordering};
 
     static NEXT_PORT: AtomicU16 = AtomicU16::new(8000);
@@ -146,8 +146,8 @@ mod test {
         }
     }
 
-    fn get_test_chat_message() -> TextMessage {
-        TextMessage::new(
+    fn get_test_chat_message() -> Message {
+        Message::new(
             MessageType::Text,
             Some("user_one".to_string()),
             "Hello World".to_string(),

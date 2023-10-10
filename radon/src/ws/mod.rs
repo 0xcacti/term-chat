@@ -11,7 +11,10 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 
-use crate::server::AppState;
+use crate::{
+    message::{MessageType, TextMessage},
+    server::AppState,
+};
 
 pub mod error;
 
@@ -47,13 +50,17 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
         }
     }
     let mut rx = state.tx.subscribe();
-    let msg = format!("{username} joined.");
-    println!("{}", msg);
+    let msg = TextMessage::new(
+        MessageType::Join,
+        Some(username.clone()),
+        format!("{} joined.", username).to_string(),
+    );
+
     let _ = state.tx.send(msg);
 
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
-            if sender.send(Message::Text(msg)).await.is_err() {
+            if sender.send(Message::Text(msg.text)).await.is_err() {
                 break;
             }
         }

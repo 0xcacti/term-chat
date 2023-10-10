@@ -1,13 +1,21 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Message {
-    pub from: String,
+pub enum MessageType {
+    Join,
+    Leave,
+    Text,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TextMessage {
+    pub kind: MessageType,
+    pub from: Option<String>,
     pub text: String,
 }
 
-impl Message {
-    pub fn new(from: String, text: String) -> Self {
-        Self { from, text }
+impl TextMessage {
+    pub fn new(kind: MessageType, from: Option<String>, text: String) -> Self {
+        Self { kind, from, text }
     }
 }
