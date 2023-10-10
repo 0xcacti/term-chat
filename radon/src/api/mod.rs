@@ -22,10 +22,10 @@ pub async fn index() -> Html<&'static str> {
     Html(std::include_str!("../chat.html"))
 }
 
-pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(index))
-        .route("/register", post(register).with_state(state))
+        .route("/register", post(register))
 }
 
 async fn register(
@@ -49,4 +49,3 @@ async fn register(
         return Ok(response);
     }
 }
-

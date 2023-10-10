@@ -99,9 +99,9 @@ impl AppState {
 pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     let state = Arc::new(AppState::new());
     // let api_routes = api::routes(Arc::clone(&state)).with_state(Arc::clone(&state));
-    let app = api::routes(Arc::clone(&state)).with_state(Arc::clone(&state));
-    // let ws_routes = ws::routes(Arc::clone(&state)).with_state(Arc::clone(&state));
-    // let app = api_routes.nest("/", ws_routes).with_state(state);
+    let api_routes = api::routes();
+    let ws_routes = ws::routes();
+    let app = api_routes.nest("/", ws_routes).with_state(state);
 
     let addr = config.address.parse().unwrap();
     println!("Listening on {}", addr);

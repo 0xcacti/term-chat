@@ -18,12 +18,10 @@ use crate::{
 
 pub mod error;
 
-pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+pub fn routes() -> Router<Arc<AppState>> {
     let route_prefix = "/ws";
 
-    Router::new()
-        .route(route_prefix, get(websocket_handler))
-        .with_state(state)
+    Router::new().route(route_prefix, get(websocket_handler))
 }
 
 async fn websocket_handler(
