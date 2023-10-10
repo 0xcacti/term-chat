@@ -36,19 +36,8 @@ async fn websocket_handler(
 async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let (mut sender, mut receiver) = stream.split();
     let mut username = String::new();
-    while let Some(Ok(message)) = receiver.next().await {
-        if let Message::Text(name) = message {
-            check_username(&state, &mut username, &name);
-            if !username.is_empty() {
-                break;
-            } else {
-                let _ = sender
-                    .send(Message::Text("Username already taken".to_string()))
-                    .await;
-            }
-            return;
-        }
-    }
+    // check that user exists
+
     let mut rx = state.tx.subscribe();
     let msg = TextMessage::new(
         MessageType::Join,
@@ -69,7 +58,8 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let name = username.clone();
     let mut receive_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(msg))) = receiver.next().await {
-            let _ = tx.send(format!("{name}: {msg}"));
+            let msg = TextMessage::new(MessageType::Text, Some(name.clone()), msg);
+            let _ = tx.send(msg);
         }
     });
 
@@ -78,8 +68,11 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
         _ = (&mut receive_task) => send_task.abort(),
     }
 
-    let msg = format!("{username} left.");
-    println!("{}", msg);
+    let msg = TextMessage::new(
+        MessageType::Leave,
+        Some(username.clone()),
+        format!("{} left the chat.", username).to_string(),
+    );
     let _ = state.tx.send(msg);
     state.user_set.lock().unwrap().remove(&username);
 }
