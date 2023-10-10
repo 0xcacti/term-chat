@@ -18,7 +18,7 @@ use tokio::{
     sync::broadcast,
 };
 
-use crate::{api, ws};
+use crate::{api, message::Message, ws};
 
 #[derive(Debug, Parser)]
 pub struct RunArgs {
@@ -85,7 +85,7 @@ impl Provider for ServerConfig {
 
 pub struct AppState {
     pub user_set: Mutex<HashSet<String>>,
-    pub tx: broadcast::Sender<String>,
+    pub tx: broadcast::Sender<Message>,
 }
 
 impl AppState {
@@ -97,10 +97,7 @@ impl AppState {
 }
 
 pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
-    // self.router = self.router.route("/", get(api::index));
-
     let state = Arc::new(AppState::new());
-    // Create the API routes
     let api_routes = api::routes();
     let ws_routes = ws::routes(state.clone());
     let app = api_routes.nest("/", ws_routes).with_state(state);
@@ -109,6 +106,7 @@ pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     println!("Listening on {}", addr);
 
     let server = Server::bind(&addr).serve(app.into_make_service());
+
     let mut sigterm = signal(SignalKind::terminate()).unwrap();
     let mut sigint = signal(SignalKind::interrupt()).unwrap();
     tokio::select! {
@@ -128,85 +126,30 @@ pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     Ok(())
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//     use crate::message::MessageType;
-//     use std::sync::atomic::{AtomicU16, Ordering};
-//     use tokio::task::JoinHandle;
-//
-//     static NEXT_PORT: AtomicU16 = AtomicU16::new(8000);
-//
-//     fn get_server_address() -> String {
-//         let port = NEXT_PORT.fetch_add(1, Ordering::SeqCst);
-//         format!("127.0.0.1:{}", port)
-//     }
-//
-//     fn get_test_chat_message() -> Vec<u8> {
-//         let message = Message::new(MessageType::Chat, "hello".to_string());
-//         message.encode()
-//     }
-//     async fn setup(server_address: &str) -> JoinHandle<()> {
-//         let mut server = Server::new(server_address).await.unwrap();
-//         let server_handle = tokio::spawn(async move {
-//             server.run().await.unwrap();
-//         });
-//         server_handle
-//     }
-//
-//     async fn read_and_validate_message(client: &mut TcpStream) {
-//         let mut len_buf = [0u8; 4];
-//         client.read_exact(&mut len_buf).await.unwrap();
-//         let msg_len = u32::from_be_bytes(len_buf) as usize;
-//
-//         let mut msg_buf = vec![0u8; msg_len];
-//         client.read_exact(&mut msg_buf).await.unwrap();
-//         let received_message: Result<Message, _> = serde_json::from_slice(&msg_buf);
-//         match received_message {
-//             Ok(message) => {
-//                 assert_eq!(message.message_type, MessageType::Chat);
-//                 assert_eq!(message.payload, "hello");
-//             }
-//             Err(e) => {
-//                 panic!("failed to parse message: {}", e);
-//             }
-//         }
-//     }
-//
-//     #[tokio::test]
-//     async fn test_client_can_connect() {
-//         let server_address = get_server_address();
-//         let server_handle = setup(&server_address).await;
-//
-//         let client = TcpStream::connect(server_address).await;
-//         assert!(client.is_ok());
-//
-//         server_handle.abort();
-//     }
-//
-//     #[tokio::test]
-//     async fn test_client_can_send_message() {
-//         let server_address = get_server_address();
-//         let server_handle = setup(&server_address).await;
-//         let mut client = TcpStream::connect(server_address).await.unwrap();
-//         let message_buf = get_test_chat_message();
-//         client.write_all(&message_buf).await.unwrap();
-//         server_handle.abort();
-//     }
-//
-//     #[tokio::test]
-//     async fn test_client_can_receive_message() {
-//         let server_address = get_server_address();
-//         let server_handle = setup(&server_address).await;
-//         let mut client_one = TcpStream::connect(&server_address).await.unwrap();
-//         let mut client_two = TcpStream::connect(&server_address).await.unwrap();
-//         let message_buf = get_test_chat_message();
-//         client_one.write_all(&message_buf.clone()).await.unwrap();
-//         read_and_validate_message(&mut client_two).await;
-//         client_one.write_all(&message_buf.clone()).await.unwrap();
-//         read_and_validate_message(&mut client_two).await;
-//         client_one.write_all(&message_buf.clone()).await.unwrap();
-//         read_and_validate_message(&mut client_two).await;
-//         server_handle.abort();
-//     }
-// }
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::message::Message;
+    use std::sync::atomic::{AtomicU16, Ordering};
+
+    static NEXT_PORT: AtomicU16 = AtomicU16::new(8000);
+
+    fn get_server_address() -> String {
+        let port = NEXT_PORT.fetch_add(1, Ordering::SeqCst);
+        format!("127.0.0.1:{}", port)
+    }
+
+    fn get_server_config() -> ServerConfig {
+        ServerConfig {
+            address: get_server_address(),
+            ws_enabled: Some(true),
+        }
+    }
+
+    fn get_test_chat_message() -> Message {
+        Message::new("user_one".to_string(), "Hello World".to_string())
+    }
+    async fn setup(server_address: &str) {
+        let config = get_server_config();
+    }
+}
