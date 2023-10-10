@@ -13,7 +13,10 @@ use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
-use tokio::sync::broadcast;
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::broadcast,
+};
 
 use crate::{api, ws};
 
@@ -96,26 +99,32 @@ impl AppState {
 pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     // self.router = self.router.route("/", get(api::index));
 
-    // steps -
-    // start rest API
-    // if enabled start ws api
-    // listen for shutdown signal and shutdown gracefully
     let state = Arc::new(AppState::new());
-
     // Create the API routes
     let api_routes = api::routes();
     let ws_routes = ws::routes(state.clone());
-
     let app = api_routes.nest("/", ws_routes).with_state(state);
 
-    // Bind to the address and serve the application
     let addr = config.address.parse().unwrap();
     println!("Listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-    // Finally, set the state
+
+    let server = Server::bind(&addr).serve(app.into_make_service());
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
+    tokio::select! {
+        _ =  async { server.await.unwrap() } => {
+            // Server completed normally
+        }
+        _ = sigint.recv() => {
+            // Received SIGINT signal
+            println!("Received SIGINT, shutting down");
+        }
+        _ = sigterm.recv() => {
+            // Received SIGTERM signal
+            println!("Received SIGTERM, shutting down");
+        }
+    }
+
     Ok(())
 }
 
