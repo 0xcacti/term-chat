@@ -7,11 +7,12 @@ use crossterm::{
 use anyhow::Result;
 use ratatui::{
     prelude::{CrosstermBackend, Terminal},
+    style::Stylize,
     widgets::Paragraph,
 };
 use std::io::stderr;
 
-fn enter() -> Result<()> {
+fn main() -> Result<()> {
     stderr().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stderr()))?;
@@ -20,8 +21,14 @@ fn enter() -> Result<()> {
     loop {
         terminal.draw(|frame| {
             let area = frame.size();
-            frame.render_widget(Paragraph::new("Press 'q' to exit").white().on_green(), area)
+            frame.render_widget(
+                Paragraph::new("Hello Ratatui! (press 'q' to quit)")
+                    .white()
+                    .on_green(),
+                area,
+            );
         })?;
+
         if event::poll(std::time::Duration::from_millis(100))? {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
