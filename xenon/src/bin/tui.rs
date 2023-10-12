@@ -12,9 +12,14 @@ use ratatui::{
 };
 use std::io::stderr;
 
+pub type Frame<'a> = ratatui::Frame<'a, CrosstermBackend<std::io::Stderr>>;
+struct App {
+    counter: i64,
+    should_quit: bool,
+}
+
 fn main() -> Result<()> {
-    crossterm::terminal::enable_raw_mode()?;
-    crossterm::execute!(std::io::stderr(), crossterm::terminal::EnterAlternateScreen)?;
+    startup()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
     let mut counter = 0;
     loop {
@@ -37,5 +42,11 @@ fn main() -> Result<()> {
     // shutdown down: reset terminal back to original state
     crossterm::execute!(std::io::stderr(), crossterm::terminal::LeaveAlternateScreen)?;
     crossterm::terminal::disable_raw_mode()?;
+    Ok(())
+}
+
+fn startup() -> Result<()> {
+    crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(std::io::stderr(), crossterm::terminal::EnterAlternateScreen)?;
     Ok(())
 }
