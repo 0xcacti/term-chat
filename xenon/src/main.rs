@@ -1,58 +1,49 @@
-use clap::{crate_version, Parser, Subcommand};
-use client::{connect, Config};
-use figment::{providers::Env, Figment};
-use std::{env, process};
+pub mod app;
+use crossterm::{
+    event::{self, KeyCode, KeyEventKind},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
+};
 
-/// term-chat client ui
-#[derive(Debug, Parser)]
-#[command(name="term-chat-tui-client", version=crate_version!(), about="terminal chat client", long_about = "Chat with friends in the terminal", arg_required_else_help(true))]
-struct TermChatParser {
-    /// The subcommand to run
-    #[command(subcommand)]
-    command: Option<Commands>,
-}
+use anyhow::Result;
+use ratatui::{
+    prelude::{CrosstermBackend, Terminal},
+    style::Stylize,
+    widgets::Paragraph,
+};
+use std::{collections::HashMap, io::stderr};
 
-#[derive(Debug, Subcommand)]
-enum Commands {
-    /// Authenticate user
-    Auth {
-        /// The username to authenticate with
-        #[arg(required = true, short, long)]
-        username: String,
-        /// The password to authenticate with
-        #[arg(required = true, short, long)]
-        password: String,
-    },
+pub type Frame<'a> = ratatui::Frame<'a, CrosstermBackend<std::io::Stderr>>;
 
-    /// Send a message
-    Send {
-        /// The message to send
-        #[arg(required = true, short, long)]
-        message: String,
-    },
-}
-
-#[tokio::main]
-async fn main() {
-    let mut config: Config = Figment::new()
-        .merge(Env::prefixed("BIBLE_RS_"))
-        .extract()
-        .unwrap();
-
-    let args = TermChatParser::parse();
-
-    // handle commands
-    match &args.command {
-        Some(Commands::Auth { username, password }) => {
-            config.username = Some(username.to_string());
-            config.password = Some(password.to_string());
-        }
-        Some(Commands::Send { message }) => {
-            connect().await.unwrap();
-        }
-        None => {
-            eprintln!("No command provided");
-            process::exit(1);
+fn main() -> Result<()> {
+    startup()?;
+    let mut terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
+    let mut counter = 0;
+    loop {
+        terminal.draw(|f| {
+            f.render_widget(Paragraph::new(format!("Counter: {counter}")), f.size());
+        })?;
+        if crossterm::event::poll(std::time::Duration::from_millis(250))? {
+            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
+                if key.kind == crossterm::event::KeyEventKind::Press {
+                    match key.code {
+                        crossterm::event::KeyCode::Char('k') => counter += 1,
+                        crossterm::event::KeyCode::Char('j') => counter -= 1,
+                        crossterm::event::KeyCode::Char('q') => break,
+                        _ => {}
+                    }
+                }
+            }
         }
     }
+    // shutdown down: reset terminal back to original state
+    crossterm::execute!(std::io::stderr(), crossterm::terminal::LeaveAlternateScreen)?;
+    crossterm::terminal::disable_raw_mode()?;
+    Ok(())
+}
+
+fn startup() -> Result<()> {
+    crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(std::io::stderr(), crossterm::terminal::EnterAlternateScreen)?;
+    Ok(())
 }
