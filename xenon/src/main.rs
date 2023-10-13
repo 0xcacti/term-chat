@@ -1,49 +1,57 @@
 pub mod app;
+use app::App;
 use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
+    event::{self, DisableMouseCapture, Event, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 
 use anyhow::Result;
 use ratatui::{
-    prelude::{CrosstermBackend, Terminal},
+    prelude::{Backend, CrosstermBackend, Terminal},
     style::Stylize,
     widgets::Paragraph,
 };
-use std::{collections::HashMap, io::stderr};
+use std::io::{self, stderr};
 
 pub type Frame<'a> = ratatui::Frame<'a, CrosstermBackend<std::io::Stderr>>;
 
 fn main() -> Result<()> {
-    startup()?;
-    let mut terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
-    let mut counter = 0;
-    loop {
-        terminal.draw(|f| {
-            f.render_widget(Paragraph::new(format!("Counter: {counter}")), f.size());
-        })?;
-        if crossterm::event::poll(std::time::Duration::from_millis(250))? {
-            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-                if key.kind == crossterm::event::KeyEventKind::Press {
-                    match key.code {
-                        crossterm::event::KeyCode::Char('k') => counter += 1,
-                        crossterm::event::KeyCode::Char('j') => counter -= 1,
-                        crossterm::event::KeyCode::Char('q') => break,
-                        _ => {}
-                    }
-                }
-            }
+    crossterm::terminal::enable_raw_mode()?;
+    crossterm::execute!(stderr(), crossterm::terminal::EnterAlternateScreen)?;
+
+    let backend = CrosstermBackend::new(stderr());
+    let mut terminal = Terminal::new(backend)?;
+    let mut app = App::new();
+
+    let res = run_app(&mut terminal, &mut app);
+
+    disable_raw_mode()?;
+    crossterm::execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    if let Ok(do_print) = res {
+        if do_print {
+            app.print_json()?;
         }
+    } else if let Err(err) = res {
+        println!("{err:?}");
     }
-    // shutdown down: reset terminal back to original state
-    crossterm::execute!(std::io::stderr(), crossterm::terminal::LeaveAlternateScreen)?;
-    crossterm::terminal::disable_raw_mode()?;
+
     Ok(())
 }
 
-fn startup() -> Result<()> {
-    crossterm::terminal::enable_raw_mode()?;
-    crossterm::execute!(std::io::stderr(), crossterm::terminal::EnterAlternateScreen)?;
-    Ok(())
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<bool> {
+    loop {
+        terminal.draw(|f| ui(f, app))?;
+        if let Event::Key(key) = event::read()? {
+            dbg!(key.code);
+        }
+
+        if let Event::
+    }
 }
