@@ -1,5 +1,5 @@
 pub mod app;
-use app::App;
+use app::{App, CurrentScreen};
 use crossterm::{
     event::{self, DisableMouseCapture, Event, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -52,6 +52,33 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<
             dbg!(key.code);
         }
 
-        if let Event::
+        if let Event::Key(key) = event::read()? {
+            if key.kind == event::KeyEventKind::Release {
+                continue;
+            }
+            match app.current_screen {
+                CurrentScreen::Main => match key.code {
+                    KeyCode::Char('e') => {
+                        app.current_screen = CurrentScreen::Edit;
+                        app.currently_editing = Some(CurrentlyEditing::Key);
+                    }
+                    KeyCode::Char('q') => {
+                        app.current_screen = CurrentScreen::Exiting;
+                    }
+                    _ => {}
+                },
+                CurrentScreen::Exiting => match key.code {
+                    KeyCode::Char('y') => {
+                        return Ok(true);
+                    }
+                    KeyCode::Char('n') => {
+                        return Ok(false);
+                    }
+                    _ => {}
+                },
+                CurrentScreen::Editing => match key.code 
+
+            }
+        }
     }
 }
