@@ -39,7 +39,7 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            address: "127.0.0.1:8080 -- my default".to_string(),
+            address: "127.0.0.1:8080".to_string(),
             ws_enabled: Some(true),
         }
     }
