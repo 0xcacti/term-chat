@@ -83,19 +83,6 @@ impl Provider for ServerConfig {
     }
 }
 
-pub struct AppState {
-    pub user_set: Mutex<HashSet<String>>,
-    pub tx: broadcast::Sender<TextMessage>,
-}
-
-impl AppState {
-    pub fn new() -> Self {
-        let (tx, _) = broadcast::channel(10);
-        let user_set = Mutex::new(HashSet::new());
-        Self { user_set, tx }
-    }
-}
-
 pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     let state = Arc::new(AppState::new());
     // let api_routes = api::routes(Arc::clone(&state)).with_state(Arc::clone(&state));
