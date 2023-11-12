@@ -15,8 +15,7 @@ use crate::server::AppState;
 pub mod error;
 
 pub struct AppState {
-    pub user_set: Mutex<HashSet<String>>,
-    pub tx: broadcast::Sender<TextMessage>,
+    pub db: Arc<sqlx::Pool<sqlx::Postgres>>,
 }
 
 impl AppState {
