@@ -1,4 +1,5 @@
 #[derive(Deserialize)]
+	"github.com/isodex/core/internal/database"
 pub struct RegisterRequest {
     username: String,
 }

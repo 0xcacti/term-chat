@@ -20,69 +20,6 @@ use tokio::{
 
 use crate::{api, message::TextMessage, ws};
 
-#[derive(Debug, Parser)]
-pub struct RunArgs {
-    /// The address to run the server on including port
-    #[arg(long = "address", value_name = "address:port")]
-    address: Option<String>,
-    // Enable websocket server
-    #[arg(long = "websocket", value_name = "ws_enabled")]
-    ws: Option<bool>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ServerConfig {
-    pub address: String,
-    pub ws_enabled: Option<bool>,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            address: "127.0.0.1:8080".to_string(),
-            ws_enabled: Some(true),
-        }
-    }
-}
-
-impl ServerConfig {
-    pub fn merge_with_args(&mut self, args: &RunArgs) {
-        if let Some(address) = &args.address {
-            self.address = address.clone();
-        }
-        if let Some(ws_enabled) = &args.ws {
-            self.ws_enabled = Some(*ws_enabled);
-        }
-    }
-
-    pub fn from<T: Provider>(provider: T) -> Result<ServerConfig, error::ServerError> {
-        Figment::from(provider)
-            .extract()
-            .map_err(error::ServerError::ConfigError)
-    }
-
-    pub fn figment() -> Figment {
-        use figment::providers::{Env, Toml};
-        Figment::from(Self::default())
-            .merge(Toml::file("radon.toml"))
-            .merge(Env::prefixed("RADON_"))
-    }
-}
-
-impl Provider for ServerConfig {
-    fn metadata(&self) -> Metadata {
-        Metadata::named("Radon Server Config")
-    }
-
-    fn data(&self) -> Result<Map<Profile, Dict>, Error> {
-        figment::providers::Serialized::defaults(ServerConfig::default()).data()
-    }
-
-    fn profile(&self) -> Option<Profile> {
-        None
-    }
-}
-
 pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     let state = Arc::new(AppState::new());
     let api_routes = api::routes();
@@ -130,6 +67,7 @@ mod test {
         ServerConfig {
             address: get_server_address(),
             ws_enabled: Some(true),
+            db_connection_string: "postgres://postgres:password@localhost:5432/radon".to_string(),
         }
     }
 
