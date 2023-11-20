@@ -11,10 +11,7 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 
-use crate::{
-    message::{MessageType, TextMessage},
-    server::AppState,
-};
+use crate::message::{MessageType, TextMessage};
 
 pub mod error;
 

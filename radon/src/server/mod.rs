@@ -2,6 +2,7 @@ pub mod error;
 
 use axum::{routing::get, Router, Server};
 use clap::Parser;
+use clap::{crate_version, Parser, Subcommand};
 use figment::{
     providers::Format,
     value::{Dict, Map},
@@ -13,6 +14,7 @@ use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
+use std::{env, process};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::broadcast,
@@ -24,7 +26,7 @@ pub async fn run(config: ServerConfig) -> Result<(), error::ServerError> {
     let state = Arc::new(AppState::new());
     let api_routes = api::routes();
     let ws_routes = ws::routes();
-    let app = api_routes.nest("/", ws_routes).with_state(state);
+    // let app = api_routes.nest("/", ws_routes).with_state(state);
 
     let addr = config.address.parse().unwrap();
     println!("Listening on {}", addr);

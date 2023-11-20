@@ -1,5 +1,6 @@
 use clap::{crate_version, Parser, Subcommand};
-use radon::server::{self, RunArgs, ServerConfig};
+use radon::config::RunArgs;
+use radon::server;
 use std::{env, process};
 
 #[derive(Debug, Parser)]

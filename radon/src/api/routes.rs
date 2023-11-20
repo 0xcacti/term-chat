@@ -1,5 +1,7 @@
+use axum::{extract::State, Json};
+use serde_derive::Deserialize;
+
 #[derive(Deserialize)]
-	"github.com/isodex/core/internal/database"
 pub struct RegisterRequest {
     username: String,
 }
