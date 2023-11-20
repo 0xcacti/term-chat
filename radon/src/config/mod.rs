@@ -1,6 +1,8 @@
 pub mod error;
+
 use clap::Parser;
 use figment::Provider;
+use figment::{error::Error, Figment, Metadata, Profile};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]

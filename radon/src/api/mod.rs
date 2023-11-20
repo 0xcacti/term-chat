@@ -1,3 +1,4 @@
+pub mod error;
 pub mod routes;
 
 use axum::{
@@ -10,12 +11,6 @@ use axum::{
 };
 use serde::Deserialize;
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
-
-pub mod error;
-
-pub struct AppState {
-    // pub db: Arc<sqlx::Pool<sqlx::Postgres>>,
-}
 
 impl AppState {
     pub fn new() -> Self {
