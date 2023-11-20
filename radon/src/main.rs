@@ -26,7 +26,6 @@ async fn main() {
     match &args.command {
         Some(Commands::Run(arguments)) => {
             config.merge_with_args(arguments);
-            server::run(config).await.unwrap();
         }
         None => {
             eprintln!("No command provided");
