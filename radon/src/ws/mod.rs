@@ -11,11 +11,14 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 
-use crate::message::{MessageType, TextMessage};
+use crate::{
+    config::ServerConfig,
+    message::{MessageType, TextMessage},
+};
 
 pub mod error;
 
-pub fn routes() -> Router<Arc<AppState>> {
+pub fn routes() -> Router<Arc<ServerConfig>> {
     let route_prefix = "/ws";
 
     Router::new().route(route_prefix, get(websocket_handler))
@@ -23,12 +26,12 @@ pub fn routes() -> Router<Arc<AppState>> {
 
 async fn websocket_handler(
     ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<ServerConfig>>,
 ) -> impl IntoResponse {
     ws.on_upgrade(|socket| websocket(state, socket))
 }
 
-async fn websocket(state: Arc<AppState>, stream: WebSocket) {
+async fn websocket(state: Arc<ServerConfig>, stream: WebSocket) {
     let (mut sender, mut receiver) = stream.split();
     let username = String::new();
     // check that user exists
@@ -72,3 +75,4 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let _ = state.tx.send(msg);
     state.user_set.lock().unwrap().remove(&username);
 }
+
