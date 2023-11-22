@@ -2,7 +2,6 @@ pub mod error;
 
 use std::sync::Arc;
 
-use super::error;
 use crate::config::ServerConfig;
 use axum::{
     body::Body,
@@ -13,6 +12,7 @@ use axum::{
 };
 use serde_derive::Deserialize;
 use validator::Validate;
+use error::UsersError;
 
 pub fn router() -> Router {
     Router::new().route("/users", post(create_user))
@@ -27,7 +27,7 @@ pub struct RegisterRequest {
 async fn create_user(
     db: Extension<PgPool>,
     Json(req): Json<RegisterRequest>,
-) -> Result<StatusCode> {
+) -> Result<StatusCode, UsersError> {
     req.validate()?;
 
     let RegisterRequest { username, password } = req;
