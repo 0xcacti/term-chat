@@ -12,12 +12,13 @@ use axum::{
     Extension, Json, Router,
 };
 use serde_derive::Deserialize;
+use validator::Validate;
 
 pub fn router() -> Router {
     Router::new().route("/users", post(create_user))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct RegisterRequest {
     username: String,
     password: String,

@@ -33,7 +33,7 @@ async fn main() {
                 .max_connections(20)
                 .connect(&database_url)
                 .await
-                .context("failed to connect to DATABASE_URL")?;
+                .unwrap();
 
             sqlx::migrate!().run(&db).await.unwrap();
         }
