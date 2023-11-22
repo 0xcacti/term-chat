@@ -1,5 +1,6 @@
 use clap::{crate_version, Parser, Subcommand};
 use radon::config::{RunArgs, ServerConfig};
+use sqlx::postgres::PgPoolOptions;
 use std::{env, process};
 
 #[derive(Debug, Parser)]
@@ -25,6 +26,16 @@ async fn main() {
     match &args.command {
         Some(Commands::Run(arguments)) => {
             config.merge_with_args(arguments);
+
+            let database_url = config.db_connection_string;
+
+            let db = PgPoolOptions::new()
+                .max_connections(20)
+                .connect(&database_url)
+                .await
+                .context("failed to connect to DATABASE_URL")?;
+
+            sqlx::migrate!().run(&db).await.unwrap();
         }
         None => {
             eprintln!("No command provided");
