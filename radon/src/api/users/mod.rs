@@ -1,3 +1,5 @@
+pub mod error;
+
 use std::sync::Arc;
 
 use super::error;
@@ -6,12 +8,13 @@ use axum::{
     body::Body,
     extract::State,
     http::{Response, StatusCode},
-    Json,
+    routing::post,
+    Extension, Json, Router,
 };
 use serde_derive::Deserialize;
 
 pub fn router() -> Router {
-    Router::new().route("/user", post(create_user))
+    Router::new().route("/users", post(create_user))
 }
 
 #[derive(Deserialize)]
@@ -26,7 +29,7 @@ async fn create_user(
 ) -> Result<StatusCode> {
     req.validate()?;
 
-    let UserAuth { username, password } = req;
+    let RegisterRequest { username, password } = req;
 
     // It would be irresponsible to store passwords in plaintext, however.
     let password_hash = crate::password::hash(password).await?;
