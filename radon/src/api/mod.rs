@@ -27,7 +27,7 @@ pub fn routes(db: PgPool) -> Router {
     let cors = get_cors();
 
     Router::new()
-        .merge(user::router())
+        .merge(users::router())
         .layer(Extension(db))
         .layer(cors)
 }
@@ -48,4 +48,5 @@ pub fn get_cors() -> CorsLayer {
             HeaderName::from_static("cache-control"),
             HeaderName::from_static("authorization"),
         ]);
+    cors
 }
