@@ -1,5 +1,8 @@
 use clap::{crate_version, Parser, Subcommand};
-use radon::config::{RunArgs, ServerConfig};
+use radon::{
+    api,
+    config::{RunArgs, ServerConfig},
+};
 use sqlx::postgres::PgPoolOptions;
 use std::{env, process};
 
@@ -19,7 +22,7 @@ enum Commands {
 #[tokio::main]
 async fn main() {
     let mut config = ServerConfig::from(ServerConfig::figment()).unwrap();
-    let database_url = dotenvy::var("DATABASE_URL").unwrap();
+    // let database_url = dotenvy::var("DATABASE_URL").unwrap();
     // The error from `var()` doesn't mention the environment variable.
 
     let args = App::parse();
@@ -30,7 +33,6 @@ async fn main() {
             config.merge_with_args(arguments);
 
             let database_url = config.db_connection_string;
-
             let db = PgPoolOptions::new()
                 .max_connections(20)
                 .connect(&database_url)
@@ -38,7 +40,7 @@ async fn main() {
                 .unwrap();
 
             sqlx::migrate!().run(&db).await.unwrap();
-            crate::api::run(db).await;
+            api::run(db).await;
         }
         None => {
             eprintln!("No command provided");

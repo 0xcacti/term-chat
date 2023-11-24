@@ -9,19 +9,39 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
-    pub address: String,
+    pub port: String,
     pub ws_enabled: Option<bool>,
+    pub db_user: String,
+    pub db_password: String,
+    pub db_endpoint: String,
+    pub db_port: String,
+    pub db_name: String,
     pub db_connection_string: String,
 }
 
 #[derive(Debug, Parser)]
 pub struct RunArgs {
-    /// The address to run the server on including port
-    #[arg(long = "address", value_name = "address:port")]
-    address: Option<String>,
+    /// The port to run the server on
+    #[arg(long = "port", value_name = "port")]
+    port: Option<String>,
     // Enable websocket server
     #[arg(long = "websocket", value_name = "ws_enabled")]
     ws: Option<bool>,
+    // Database user
+    #[arg(short = 'u', long = "db_user", value_name = "db_user")]
+    db_user: Option<String>,
+    // Database password
+    #[arg(short = 'p', long = "db_password", value_name = "db_password")]
+    db_password: Option<String>,
+    // Database endpoint
+    #[arg(short = 'e', long = "db_endpoint", value_name = "db_endpoint")]
+    db_endpoint: Option<String>,
+    // Database port
+    #[arg(long = "db_port", value_name = "db_port")]
+    db_port: Option<String>,
+    // Database name
+    #[arg(long = "db_name", value_name = "db_name")]
+    db_name: Option<String>,
     // Database connection string
     #[arg(
         long = "database connection string",
@@ -33,9 +53,14 @@ pub struct RunArgs {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            address: "127.0.0.1:8080".to_string(),
+            port: "8080".to_string(),
             ws_enabled: Some(true),
-            db_connection_string: "postgres://postgres:password@localhost:5432/radon".to_string(),
+            db_user: "postgres".to_string(),
+            db_password: "postgres".to_string(),
+            db_endpoint: "localhost".to_string(),
+            db_port: "5432".to_string(),
+            db_name: "radon".to_string(),
+            db_connection_string: "".to_string(),
         }
     }
 }
@@ -55,12 +80,36 @@ impl Provider for ServerConfig {
 }
 
 impl ServerConfig {
+    pub fn compute_db_connection_string(&mut self) {
+        self.db_connection_string = format!(
+            "postgresql://{}:{}@{}:{}/{}",
+            self.db_user, self.db_password, self.db_endpoint, self.db_port, self.db_name
+        );
+    }
     pub fn merge_with_args(&mut self, args: &RunArgs) {
-        if let Some(address) = &args.address {
-            self.address = address.clone();
+        if let Some(port) = &args.port {
+            self.port = port.clone();
         }
         if let Some(ws_enabled) = &args.ws {
             self.ws_enabled = Some(*ws_enabled);
+        }
+        if let Some(db_user) = &args.db_user {
+            self.db_user = db_user.clone();
+        }
+        if let Some(db_password) = &args.db_password {
+            self.db_password = db_password.clone();
+        }
+        if let Some(db_endpoint) = &args.db_endpoint {
+            self.db_endpoint = db_endpoint.clone();
+        }
+        if let Some(db_port) = &args.db_port {
+            self.db_port = db_port.clone();
+        }
+        if let Some(db_name) = &args.db_name {
+            self.db_name = db_name.clone();
+        }
+        if let Some(db_connection_string) = &args.db_connection_string {
+            self.db_connection_string = db_connection_string.clone();
         }
     }
 

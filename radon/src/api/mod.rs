@@ -2,18 +2,11 @@ pub mod error;
 pub mod users;
 
 use axum::{
-    body::Body,
-    extract::State,
     http::{header::CONTENT_TYPE, HeaderName, Method, Response, StatusCode},
-    response::Html,
-    routing::{get, post},
     Extension, Json, Router, Server,
 };
 use sqlx::PgPool;
-use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-
-use crate::config::ServerConfig;
 
 pub async fn run(db: PgPool) {
     let app = routes(db);

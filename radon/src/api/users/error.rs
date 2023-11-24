@@ -1,8 +1,4 @@
-use axum::{
-    body::{Body, BoxBody},
-    http::{Response, StatusCode},
-    response::IntoResponse,
-};
+use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 use thiserror::Error;
 
@@ -18,37 +14,16 @@ pub enum UsersError {
 
 // should I implement into response or just respond_with_json
 impl IntoResponse for UsersError {
-    fn into_response(self) -> Response<BoxBody> {
+    fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
-            UsersError::UsernameTaken => (StatusCode::CONFLICT, "Username already taken"),
-            UsersError::Invalid => (StatusCode::CONFLICT, "Invalid username or password"),
+            UsersError::Invalid => (StatusCode::BAD_REQUEST, "Invalid request"),
+            UsersError::UsernameTaken => (StatusCode::CONFLICT, "Username is taken"),
             UsersError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
-            // Handle other error variants...
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"),
+            // handle other variants
         };
 
-        let body = json!({
-            "error": error_message
-        });
+        let body = Json(json!({ "error": error_message }));
 
-        let body_str = match serde_json::to_string(&body) {
-            Ok(b) => b,
-            Err(_) => {
-                return Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(BoxBody::new("Failed to serialize error"))
-                    .unwrap()
-            }
-        };
-
-        Response::builder()
-            .status(status)
-            .body(BoxBody::new(body_str))
-            .unwrap_or_else(|_| {
-                Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(BoxBody::new("Failed to build response"))
-                    .unwrap()
-            })
+        (status, body).into_response()
     }
 }
