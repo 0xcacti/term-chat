@@ -27,10 +27,17 @@ pub struct RegisterRequest {
     password: String,
 }
 
+#[derive(Deserialize)]
+pub struct RegisterResponse {
+    user_id: String,
+    username: String,
+}
+
 async fn create_user(
     db: Extension<PgPool>,
     Json(req): Json<RegisterRequest>,
-) -> Result<StatusCode, UsersError> {
+) -> Result<(StatusCode, Json<RegisterResponse>), UsersError> {
+    // println!("req: {:?}", "hello");
     req.validate().map_err(|_| UsersError::Invalid)?;
 
     let RegisterRequest { username, password } = req;
@@ -38,27 +45,36 @@ async fn create_user(
     // It would be irresponsible to store passwords in plaintext, however.
     //let password_hash = crate::password::hash(password).await?;
     let password_hash = "password_hash".to_string();
+    let time = chrono::Utc::now().naive_utc();
 
     let res = sqlx::query!(
         // language=PostgreSQL
         r#"
-            insert into "users"(username, password_hash)
-            values ($1, $2)
+            insert into "users"(username, password_hash, created_at, updated_at)
+            values ($1, $2, $3, $4)
         "#,
         username,
-        password_hash
+        password_hash,
+        time.clone(),
+        time
     )
     .execute(&*db)
     .await;
-    let res_unwrapped = match res {
-        Ok(_) => Ok(StatusCode::CREATED),
+    match res {
+        Ok(_) => {
+            return Ok((
+                StatusCode::CREATED,
+                Json(RegisterResponse {
+                    user_id: "user_id".to_string(),
+                    username,
+                }),
+            ))
+        }
         Err(sqlx::Error::Database(dbe)) if dbe.constraint() == Some("user_username_key") => {
-            return Err(UsersError::UsernameTaken);
+            return Err(UsersError::UsernameTaken)
         }
         Err(e) => return Err(UsersError::Database(e)),
     };
-
-    return res_unwrapped;
 }
 
 impl RegisterRequest {

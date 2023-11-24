@@ -16,9 +16,12 @@ pub enum UsersError {
 impl IntoResponse for UsersError {
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
-            UsersError::Invalid => (StatusCode::BAD_REQUEST, "Invalid request"),
-            UsersError::UsernameTaken => (StatusCode::CONFLICT, "Username is taken"),
-            UsersError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
+            UsersError::Invalid => (StatusCode::BAD_REQUEST, "Invalid request".to_string()),
+            UsersError::UsernameTaken => (StatusCode::CONFLICT, "Username is taken".to_string()),
+            UsersError::Database(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", e),
+            ),
             // handle other variants
         };
 
