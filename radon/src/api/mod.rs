@@ -8,20 +8,28 @@ use axum::{
 use sqlx::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 
-pub async fn run(db: PgPool) {
-    let app = routes(db);
-    let addr = "127.0.0.1:8081".parse().unwrap();
+use crate::config::ServerConfig;
+
+#[derive(Debug, Clone)]
+pub struct AppState {
+    pub config: ServerConfig,
+    pub db: PgPool,
+}
+
+pub async fn run(state: AppState) {
+    let app = routes(&state);
+    let addr = format!("127.0.0.1:{}", state.config.port).parse().unwrap();
     println!("Listening on {}", addr);
     let server = Server::bind(&addr).serve(app.into_make_service());
     server.await.unwrap();
 }
 
-pub fn routes(db: PgPool) -> Router {
+pub fn routes(state: &AppState) -> Router {
     let cors = get_cors();
 
     Router::new()
         .merge(users::router())
-        .layer(Extension(db))
+        .layer(Extension(state))
         .layer(cors)
 }
 

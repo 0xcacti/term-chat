@@ -39,6 +39,11 @@ async fn main() {
                 .await
                 .unwrap();
 
+            app_state = AppState {
+                config: config.clone(),
+                db: db.clone(),
+            };
+
             sqlx::migrate!().run(&db).await.unwrap();
             api::run(db).await;
         }

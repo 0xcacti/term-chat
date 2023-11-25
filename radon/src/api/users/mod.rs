@@ -17,6 +17,8 @@ use sqlx::{PgExecutor, PgPool};
 use uuid::Uuid;
 use validator::Validate;
 
+use super::AppState;
+
 pub fn router() -> Router {
     Router::new().route("/users", post(create_user))
 }
@@ -34,7 +36,7 @@ pub struct RegisterResponse {
 }
 
 async fn create_user(
-    db: Extension<PgPool>,
+    state: Extension<&AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegisterResponse>), UsersError> {
     // println!("req: {:?}", "hello");
@@ -58,7 +60,7 @@ async fn create_user(
         time.clone(),
         time
     )
-    .execute(&*db)
+    .execute(&*state.db)
     .await;
     match res {
         Ok(_) => {
