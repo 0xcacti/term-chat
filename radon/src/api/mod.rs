@@ -1,11 +1,15 @@
 pub mod error;
 pub mod users;
 
+use std::sync::Arc;
+
 use axum::{
+    extract::State,
     http::{header::CONTENT_TYPE, HeaderName, Method, Response, StatusCode},
     Extension, Json, Router, Server,
 };
 use sqlx::PgPool;
+use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::config::ServerConfig;
@@ -16,20 +20,19 @@ pub struct AppState {
     pub db: PgPool,
 }
 
-pub async fn run(state: AppState) {
-    let app = routes(&state);
+pub async fn run(state: Arc<AppState>) {
+    let app = routes(state.clone());
     let addr = format!("127.0.0.1:{}", state.config.port).parse().unwrap();
     println!("Listening on {}", addr);
     let server = Server::bind(&addr).serve(app.into_make_service());
     server.await.unwrap();
 }
 
-pub fn routes(state: &AppState) -> Router {
+pub fn routes(state: Arc<AppState>) -> Router {
     let cors = get_cors();
 
     Router::new()
-        .merge(users::router())
-        .layer(Extension(state))
+        .merge(users::router(state.clone()))
         .layer(cors)
 }
 

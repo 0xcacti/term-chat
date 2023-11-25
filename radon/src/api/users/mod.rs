@@ -19,8 +19,10 @@ use validator::Validate;
 
 use super::AppState;
 
-pub fn router() -> Router {
-    Router::new().route("/users", post(create_user))
+pub fn router(state: Arc<AppState>) -> Router {
+    Router::new()
+        .route("/users", post(create_user))
+        .with_state(state)
 }
 
 #[derive(Deserialize, Validate)]
@@ -35,10 +37,11 @@ pub struct RegisterResponse {
     username: String,
 }
 
+#[axum_macros::debug_handler]
 async fn create_user(
-    state: Extension<&AppState>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterRequest>,
-) -> Result<(StatusCode, Json<RegisterResponse>), UsersError> {
+) -> Response<Body> {
     // println!("req: {:?}", "hello");
     req.validate().map_err(|_| UsersError::Invalid)?;
 
@@ -60,7 +63,7 @@ async fn create_user(
         time.clone(),
         time
     )
-    .execute(&*state.db)
+    .execute(&state.db)
     .await;
     match res {
         Ok(_) => {

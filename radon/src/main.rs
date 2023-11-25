@@ -1,6 +1,6 @@
 use clap::{crate_version, Parser, Subcommand};
 use radon::{
-    api,
+    api::{self, AppState},
     config::{RunArgs, ServerConfig},
 };
 use sqlx::postgres::PgPoolOptions;
@@ -39,13 +39,13 @@ async fn main() {
                 .await
                 .unwrap();
 
-            app_state = AppState {
-                config: config.clone(),
+            let app_state = AppState {
+                config,
                 db: db.clone(),
             };
 
             sqlx::migrate!().run(&db).await.unwrap();
-            api::run(db).await;
+            api::run(Arc::new(app_state)).await;
         }
         None => {
             eprintln!("No command provided");

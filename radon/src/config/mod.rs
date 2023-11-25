@@ -7,7 +7,7 @@ use figment::Provider;
 use figment::{error::Error, Figment, Metadata, Profile};
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ServerConfig {
     pub port: String,
     pub ws_enabled: Option<bool>,
