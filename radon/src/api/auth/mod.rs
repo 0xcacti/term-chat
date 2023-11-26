@@ -26,9 +26,8 @@ pub struct LoginRequest {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginResponse {
-    pub email: String,
-    pub id: usize,
-    pub token: String,
+    pub username: String,
+    pub access_token: String,
     pub refresh_token: String,
 }
 
@@ -37,43 +36,34 @@ pub async fn login(
     Json(login_attempt): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<LoginResponse>), AuthError> {
     let user_id = login_attempt.verify(&state.db).await?;
-    match user {
-        Ok(user) => {
-            if !bcrypt::verify(&user_candidate.password, &user.password).unwrap() {
-                return respond_with_error(StatusCode::UNAUTHORIZED, "something went wrong");
-            }
 
-            let access_token_expiry = 60 * 60; // 1 hour
-            let refresh_token_expiry = 60 * 60 * 24 * 60; // 60 days
+    let access_token_expiry = 60 * 60; // 1 hour
+    let refresh_token_expiry = 60 * 60 * 24 * 60; // 60 days
 
-            let access_jwt = make_jwt(
-                user.id,
-                "chirpy-access".to_string(),
-                &state.lock().await.jwt_secret,
-                Duration::from_secs(access_token_expiry),
-            )
-            .unwrap();
+    let access_jwt = utils::make_jwt(
+        user.id,
+        "radon-access".to_string(),
+        &state.jwt_secret,
+        Duration::from_secs(access_token_expiry),
+    )
+    .unwrap();
 
-            let refresh_jwt = make_jwt(
-                user.id,
-                "chirpy-refresh".to_string(),
-                &state.lock().await.jwt_secret,
-                Duration::from_secs(refresh_token_expiry),
-            )
-            .unwrap();
+    let refresh_jwt = utils::make_jwt(
+        user.id,
+        "radon-refresh".to_string(),
+        &state.jwt_secret,
+        Duration::from_secs(refresh_token_expiry),
+    )
+    .unwrap();
 
-            return respond_with_json(
-                serde_json::to_string(&user.into_login_response(access_jwt, refresh_jwt)).unwrap(),
-                StatusCode::OK,
-            );
-        }
-        Err(DBError::UserNotFound) => {
-            return respond_with_error(StatusCode::NOT_FOUND, "User not found")
-        }
-        Err(_) => {
-            return respond_with_error(StatusCode::INTERNAL_SERVER_ERROR, "something went wrong")
-        }
-    }
+    Ok((
+        StatusCode::OK,
+        Json(LoginResponse {
+            username: login_attempt.username,
+            access_token: access_jwt,
+            refresh_token: refresh_jwt,
+        }),
+    ))
 }
 
 impl LoginRequest {

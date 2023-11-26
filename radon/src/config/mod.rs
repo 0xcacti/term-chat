@@ -17,6 +17,7 @@ pub struct ServerConfig {
     pub db_port: String,
     pub db_name: String,
     pub db_connection_string: String,
+    pub jwt_secret: String,
 }
 
 #[derive(Debug, Parser)]
@@ -48,6 +49,8 @@ pub struct RunArgs {
         value_name = "db_connection_string"
     )]
     db_connection_string: Option<String>,
+    #[arg(long = "jwt secret")]
+    jwt_secret: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -61,6 +64,7 @@ impl Default for ServerConfig {
             db_port: "5432".to_string(),
             db_name: "radon".to_string(),
             db_connection_string: "".to_string(),
+            jwt_secret: "secret".to_string(),
         }
     }
 }
@@ -110,6 +114,9 @@ impl ServerConfig {
         }
         if let Some(db_connection_string) = &args.db_connection_string {
             self.db_connection_string = db_connection_string.clone();
+        }
+        if let Some(jwt_secret) = &args.jwt_secret {
+            self.jwt_secret = jwt_secret.clone();
         }
     }
 
