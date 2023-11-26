@@ -35,23 +35,23 @@ pub async fn login(
     Extension(state): Extension<Arc<AppState>>,
     Json(login_attempt): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<LoginResponse>), AuthError> {
-    let user_id = login_attempt.verify(&state.db).await?;
+    let user_id = login_attempt.clone().verify(&state.db).await?;
 
     let access_token_expiry = 60 * 60; // 1 hour
     let refresh_token_expiry = 60 * 60 * 24 * 60; // 60 days
 
     let access_jwt = utils::make_jwt(
-        user.id,
+        user_id,
         "radon-access".to_string(),
-        &state.jwt_secret,
+        &state.config.jwt_secret,
         Duration::from_secs(access_token_expiry),
     )
     .unwrap();
 
     let refresh_jwt = utils::make_jwt(
-        user.id,
+        user_id,
         "radon-refresh".to_string(),
-        &state.jwt_secret,
+        &state.config.jwt_secret,
         Duration::from_secs(refresh_token_expiry),
     )
     .unwrap();

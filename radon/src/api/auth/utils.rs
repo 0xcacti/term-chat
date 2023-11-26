@@ -10,6 +10,7 @@ use tokio::task;
 
 use argon2::password_hash::SaltString;
 use argon2::{password_hash, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -49,7 +50,7 @@ pub async fn verify(password: String, hash: String) -> anyhow::Result<bool> {
 }
 
 pub fn make_jwt(
-    user_id: usize,
+    user_id: Uuid,
     issuer: String,
     user_secret: &str,
     expires_in: Duration,
