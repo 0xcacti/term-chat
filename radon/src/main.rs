@@ -4,7 +4,7 @@ use radon::{
     config::{RunArgs, ServerConfig},
 };
 use sqlx::postgres::PgPoolOptions;
-use std::{env, process};
+use std::{env, process, sync::Arc};
 
 #[derive(Debug, Parser)]
 #[command(name="radon", version=crate_version!(), about="terminal chat server", long_about = "Server to let you chat with friends in the terminal", arg_required_else_help(true))]
@@ -32,7 +32,7 @@ async fn main() {
         Some(Commands::Run(arguments)) => {
             config.merge_with_args(arguments);
 
-            let database_url = config.db_connection_string;
+            let database_url = &config.db_connection_string;
             let db = PgPoolOptions::new()
                 .max_connections(20)
                 .connect(&database_url)

@@ -12,7 +12,7 @@ use axum::{
 };
 use error::UsersError;
 use rand::Rng;
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use sqlx::{PgExecutor, PgPool};
 use uuid::Uuid;
 use validator::Validate;
@@ -31,7 +31,7 @@ pub struct RegisterRequest {
     password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct RegisterResponse {
     user_id: String,
     username: String,
@@ -41,7 +41,7 @@ pub struct RegisterResponse {
 async fn create_user(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterRequest>,
-) -> Response<Body> {
+) -> Result<(StatusCode, Json<RegisterResponse>), UsersError> {
     // println!("req: {:?}", "hello");
     req.validate().map_err(|_| UsersError::Invalid)?;
 
