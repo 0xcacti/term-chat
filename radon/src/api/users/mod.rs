@@ -2,20 +2,15 @@ pub mod error;
 
 use std::{sync::Arc, time::Duration};
 
-use crate::config::ServerConfig;
-use axum::{
-    body::Body,
-    extract::State,
-    http::{Response, StatusCode},
-    routing::post,
-    Extension, Json, Router,
-};
+use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
 use error::UsersError;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-use sqlx::{PgExecutor, PgPool};
+use sqlx::PgExecutor;
 use uuid::Uuid;
 use validator::Validate;
+
+use crate::auth;
 
 use super::AppState;
 
@@ -47,9 +42,10 @@ async fn create_user(
 
     let RegisterRequest { username, password } = req;
 
-    // It would be irresponsible to store passwords in plaintext, however.
-    //let password_hash = crate::password::hash(password).await?;
-    let password_hash = "password_hash".to_string();
+    let password_hash = auth::hash(password)
+        .await
+        .map_err(|_| UsersError::BadPassword)?;
+
     let time = chrono::Utc::now().naive_utc();
 
     let res = sqlx::query!(

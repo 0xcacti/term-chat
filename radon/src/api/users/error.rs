@@ -10,6 +10,8 @@ pub enum UsersError {
     UsernameTaken,
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
+    #[error("Invalid password")]
+    BadPassword,
 }
 
 // should I implement into response or just respond_with_json
@@ -17,6 +19,7 @@ impl IntoResponse for UsersError {
     fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
             UsersError::Invalid => (StatusCode::BAD_REQUEST, "Invalid request".to_string()),
+            UsersError::BadPassword => (StatusCode::BAD_REQUEST, "Invalid password".to_string()),
             UsersError::UsernameTaken => (StatusCode::CONFLICT, "Username is taken".to_string()),
             UsersError::Database(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
