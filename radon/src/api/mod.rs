@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod error;
 pub mod users;
 
@@ -10,7 +11,10 @@ use axum::{
 };
 use sqlx::PgPool;
 use tokio::sync::Mutex;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer,
+};
 
 use crate::config::ServerConfig;
 

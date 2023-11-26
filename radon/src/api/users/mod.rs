@@ -2,7 +2,12 @@ pub mod error;
 
 use std::{sync::Arc, time::Duration};
 
-use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use axum::{
+    extract::State,
+    http::StatusCode,
+    routing::{get, post},
+    Json, Router,
+};
 use error::UsersError;
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -16,8 +21,14 @@ use super::AppState;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/users", post(create_user))
+        .route("/users", get(fetch_users).post(create_user))
         .with_state(state)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct User {
+    pub user_id: String,
+    pub username: String,
 }
 
 #[derive(Deserialize, Validate)]
@@ -75,6 +86,34 @@ async fn create_user(
         }
         Err(sqlx::Error::Database(dbe)) if dbe.constraint() == Some("user_username_key") => {
             return Err(UsersError::UsernameTaken)
+        }
+        Err(e) => return Err(UsersError::Database(e)),
+    };
+}
+
+#[axum_macros::debug_handler]
+async fn fetch_users(
+    State(state): State<Arc<AppState>>,
+) -> Result<(StatusCode, Json<Vec<User>>), UsersError> {
+    let res = sqlx::query!(
+        // language=PostgreSQL
+        r#"
+            SELECT * FROM "users";
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await;
+
+    match res {
+        Ok(records) => {
+            let users = records
+                .into_iter()
+                .map(|record| User {
+                    user_id: record.user_id.to_string(),
+                    username: record.username,
+                })
+                .collect::<Vec<User>>();
+            return Ok((StatusCode::OK, Json(users)));
         }
         Err(e) => return Err(UsersError::Database(e)),
     };
