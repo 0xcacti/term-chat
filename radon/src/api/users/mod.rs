@@ -42,6 +42,8 @@ async fn create_user(
 
     let RegisterRequest { username, password } = req;
 
+    // It would be irresponsible to store passwords in plaintext, however.
+    //
     let password_hash = auth::hash(password)
         .await
         .map_err(|_| UsersError::BadPassword)?;

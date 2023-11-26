@@ -32,6 +32,7 @@ dotenvy = "0.15.7"
 chrono = "0.4.31"
 axum-macros = "0.3.8"
 argon2 = "0.5.2"
+jsonwebtoken = "9.1.0"
 
 
 

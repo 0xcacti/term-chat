@@ -22,8 +22,6 @@ enum Commands {
 #[tokio::main]
 async fn main() {
     let mut config = ServerConfig::from(ServerConfig::figment()).unwrap();
-    // let database_url = dotenvy::var("DATABASE_URL").unwrap();
-    // The error from `var()` doesn't mention the environment variable.
 
     let args = App::parse();
 
