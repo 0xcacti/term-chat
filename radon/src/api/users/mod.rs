@@ -15,7 +15,7 @@ use sqlx::PgExecutor;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::auth;
+use crate::api::auth::utils;
 
 use super::AppState;
 
@@ -55,7 +55,7 @@ async fn create_user(
 
     // It would be irresponsible to store passwords in plaintext, however.
     //
-    let password_hash = auth::hash(password)
+    let password_hash = utils::hash(password)
         .await
         .map_err(|_| UsersError::BadPassword)?;
 
@@ -117,35 +117,4 @@ async fn fetch_users(
         }
         Err(e) => return Err(UsersError::Database(e)),
     };
-}
-
-impl RegisterRequest {
-    // NOTE: normally we wouldn't want to verify the username and password every time,
-    // but persistent sessions would have complicated the example.
-    pub async fn verify(self, db: impl PgExecutor<'_> + Send) -> Result<Uuid, UsersError> {
-        self.validate().map_err(|_| UsersError::Invalid)?;
-
-        let maybe_user = sqlx::query!(
-            r#"select user_id, password_hash from "users" where username = $1"#,
-            self.username
-        )
-        .fetch_optional(db)
-        .await?;
-
-        if let Some(user) = maybe_user {
-            // let verified = crate::password::verify(self.password, user.password_hash).await?;
-            let verified = true;
-
-            if verified {
-                return Ok(user.user_id);
-            }
-        }
-
-        // Sleep a random amount of time to avoid leaking existence of a user in timing.
-        let sleep_duration =
-            rand::thread_rng().gen_range(Duration::from_millis(100)..=Duration::from_millis(500));
-        tokio::time::sleep(sleep_duration).await;
-
-        Err(UsersError::Invalid)
-    }
 }
