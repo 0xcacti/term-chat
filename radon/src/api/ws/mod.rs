@@ -1,3 +1,4 @@
+pub mod error;
 use std::sync::Arc;
 
 use axum::{
@@ -16,14 +17,11 @@ use crate::{
     message::{MessageType, TextMessage},
 };
 
-pub mod error;
-
-pub fn routes() -> Router<Arc<ServerConfig>> {
-    let route_prefix = "/ws";
-
-    Router::new().route(route_prefix, get(websocket_handler))
+pub fn router(state: Arc<AppState>) -> Router {
+    Router::new()
+        .route("/ws", get(websocket_handler))
+        .with_state(state)
 }
-
 async fn websocket_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<ServerConfig>>,

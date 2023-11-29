@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod error;
 pub mod users;
+pub mod ws;
 
 use std::sync::Arc;
 
@@ -10,7 +11,7 @@ use axum::{
     Extension, Json, Router, Server,
 };
 use sqlx::PgPool;
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
@@ -22,6 +23,7 @@ use crate::config::ServerConfig;
 pub struct AppState {
     pub config: ServerConfig,
     pub db: PgPool,
+    pub tx: broadcast::Sender<String>,
 }
 
 pub async fn run(state: Arc<AppState>) {
