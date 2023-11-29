@@ -26,9 +26,31 @@ pub struct LoginRequest {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginResponse {
+    pub id: String,
     pub username: String,
     pub access_token: String,
     pub refresh_token: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RefreshResponse {
+    pub username: String,
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RefreshRequest {
+    pub refresh_token: String,
+}
+
+pub async fn revoke(
+    Extension(state): Extension<Arc<AppState>>,
+) -> Result<(StatusCode, Json<RevokeResponse>), AuthError> {
+}
+
+pub async fn refresh(
+    Extension(state): Extension<Arc<AppState>>,
+) -> Result<(StatusCode, Json<RefreshResponse>), AuthError> {
 }
 
 pub async fn login(
@@ -59,6 +81,7 @@ pub async fn login(
     Ok((
         StatusCode::OK,
         Json(LoginResponse {
+            id: user_id.to_string(),
             username: login_attempt.username,
             access_token: access_jwt,
             refresh_token: refresh_jwt,
