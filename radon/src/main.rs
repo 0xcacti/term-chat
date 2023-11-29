@@ -1,4 +1,5 @@
 use clap::{crate_version, Parser, Subcommand};
+use log::info;
 use radon::{
     api::{self, AppState},
     config::{RunArgs, ServerConfig},
@@ -30,6 +31,7 @@ async fn main() {
         Some(Commands::Run(arguments)) => {
             config.merge_with_args(arguments);
 
+            info!("Performing database migrations");
             let database_url = &config.db_connection_string;
             let db = PgPoolOptions::new()
                 .max_connections(20)
