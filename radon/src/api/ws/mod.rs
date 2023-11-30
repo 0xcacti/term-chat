@@ -97,7 +97,4 @@ async fn websocket(state: Arc<AppState>, stream: WebSocket) {
     let msg = format!("{username} left.");
     tracing::debug!("{msg}");
     let _ = state.tx.send(msg);
-
-    // Remove username from map so new clients can take it again.
-    state.user_set.lock().unwrap().remove(&username);
 }
