@@ -13,3 +13,4 @@ Xenon is the terminal client for the app.  It uses ratatui which appears to be t
 rust tui library.
 
 
+IM NOT DONE HERE - I WILL LEARN HOW TO BUILD THIS
