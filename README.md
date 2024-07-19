@@ -15,3 +15,4 @@ rust tui library.
 
 IM NOT DONE HERE - I WILL LEARN HOW TO BUILD THIS
 I have learned websockets, now it's time
+We are gonna run this back double
